@@ -1,0 +1,157 @@
+# .golangci.yml
+run:
+  # Timeout for analysis, e.g. 30s, 5m.
+  timeout: 30s
+
+  # Include test files or not.
+  tests: true
+
+# Output configuration options
+output:
+  # Format: colored-line-number|line-number|json|tab|checkstyle|code-climate|junit-xml|github-actions
+  formats:
+    - format: colored-line-number
+
+  # Print lines of code with issue.
+  print-issued-lines: true
+
+  # Print linter name in the end of issue text.
+  print-linter-name: true
+
+# All available settings of specific linters
+linters-settings:
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    check-type-assertions: true
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment
+
+  gocyclo:
+    # Minimal code complexity to report.
+    min-complexity: 15
+
+  maligned:
+    # Print struct with more effective memory layout.
+    suggest-new: true
+
+  # depguard:
+  #   rules:
+  #     main:
+  #       list-mode: lax
+  #       deny:
+  dupl:
+    # Tokens count to trigger issue.
+    threshold: 100
+
+  goconst:
+    # Minimal length of string constant.
+    min-len: 2
+    # Minimal occurrences count to trigger.
+    min-occurrences: 2
+
+  misspell:
+    # Correct spellings using locale preferences for US or UK.
+    locale: US
+
+  lll:
+    # Max line length, lines longer will be reported.
+    line-length: 200
+    # Tab width in spaces.
+    tab-width: 4
+
+  unparam:
+    # Call this annotation to suppress unused parameter warning.
+    check-exported: false
+
+  nakedret:
+    # Make an issue if func has more lines of code than this setting and it has naked returns.
+    max-func-lines: 30
+
+  prealloc:
+    # Report preallocation suggestions only on simple loops that have no returns/breaks/continues/gotos in them.
+    simple: true
+    range-loops: true # Report preallocation suggestions on range loops.
+    for-loops: false # Report preallocation suggestions on for loops.
+
+linters:
+  enable:
+    - bodyclose
+    # - depguard
+    - dogsled
+    - dupl
+    - errcheck
+    # - errorlint
+    # - errorlint
+    - exhaustruct
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - lll
+    - misspell
+    - nakedret
+    - nolintlint
+    - paralleltest
+    - revive
+    - rowserrcheck
+    - staticcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+    - wrapcheck
+    - wsl
+
+  # Disable specific linter
+  # disable:
+  #   - maligned
+
+issues:
+  # Maximum count of issues with the same text.
+  max-same-issues: 3
+
+  # Excluding configuration per-path, per-linter, per-text and per-source
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+
+    # Exclude known linters from partially hard-coded array of strings.
+    - linters:
+        - govet
+      text: 'declaration of "err" shadows'
+
+    # Exclude some staticcheck messages
+    - linters:
+        - staticcheck
+      text: "SA9003:"
+
+    # Exclude lll isues for long lines with go:generate
+    - linters:
+        - lll
+      source: "^//go:generate "
+  exclude-dirs:
+    - vendor
+# Golangci-lint output severity configuration
+severity:
+  # Default value is empty string.
+  # Set to warning to treat all issues as warnings instead of errors.
+  default-severity: error
+  # If set to true, severity of golangci-lint issues will be defined by exit code.
+  # Otherwise all issues will have default severity (error).
+  case-sensitive: false

@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    ports:
+      - ${DB_PORT}:5432
+    environment:
+      POSTGRES_USER: tests
+      POSTGRES_PASSWORD: 123456
+      POSTGRES_DB: tests
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U tests" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  migrations-down:
+    image: migrate/migrate
+    command: -path=/migrations/ -database=postgres://tests:123456@db:5432/tests?sslmode=disable drop -f
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+  migrations:
+    image: migrate/migrate
+    command: -path=/migrations/ -database=postgres://tests:123456@db:5432/tests?sslmode=disable up
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations-down:
+        condition: service_completed_successfully
+    volumes:
+      - ./migrations:/migrations
