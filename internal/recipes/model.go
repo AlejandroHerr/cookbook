@@ -1,125 +1,166 @@
 package recipes
 
 import (
-	"encoding/json"
-	"fmt"
+	"errors"
+	"time"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/ingredients"
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 )
 
 type Recipe struct {
-	id          uuid.UUID
-	name        string
-	description *string
-	url         *string
-	ingredients []ingredients.Ingredient
+	ID          uuid.UUID          `json:"id"`
+	Title       string             `json:"title"`
+	Headline    *string            `json:"headline"`
+	Description *string            `json:"description,omitempty"`
+	Steps       *string            `json:"steps"`
+	Servings    *uint              `json:"servings"`
+	URL         *string            `json:"url,omitempty"`
+	Tags        []string           `json:"tags"`
+	Ingredients []RecipeIngredient `json:"ingredients"`
+	CreatedAt   time.Time          `json:"createdAt"`
+	UpdatedAt   time.Time          `json:"updatedAt"`
 }
 
-func New(
-	id uuid.UUID,
-	name string,
-	description *string,
-	url *string,
-	ingredientsList []ingredients.Ingredient,
-) *Recipe {
-	if ingredientsList == nil {
-		ingredientsList = make([]ingredients.Ingredient, 0)
-	}
-
-	return &Recipe{
-		id:          id,
-		name:        name,
-		description: description,
-		url:         url,
-		ingredients: ingredientsList,
-	}
-}
-
-func (r Recipe) ID() uuid.UUID {
-	return r.id
-}
-
-func (r Recipe) Name() string {
-	return r.name
-}
-
-func (r Recipe) Description() *string {
-	return r.description
-}
-
-func (r Recipe) URL() *string {
-	return r.url
-}
-
-func (r Recipe) Ingredients() []ingredients.Ingredient {
-	return r.ingredients
-}
-
-func (r *Recipe) AddIngredients(ingredients ...ingredients.Ingredient) {
-	r.ingredients = append(r.ingredients, ingredients...)
-}
-
-func (r *Recipe) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(&struct {
-		ID          uuid.UUID                `json:"id"`
-		Name        string                   `json:"name"`
-		Description *string                  `json:"description,omitempty"`
-		URL         *string                  `json:"url,omitempty"`
-		Ingredients []ingredients.Ingredient `json:"ingredients"`
-	}{
-		ID:          r.id,
-		Name:        r.name,
-		Description: r.description,
-		URL:         r.url,
-		Ingredients: r.ingredients,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("error marshaling recipe: %w", err)
-	}
-
-	return data, nil
-}
-
-func (r *Recipe) UnmarshalJSON(data []byte) error {
-	var recipe struct {
-		ID          uuid.UUID                `json:"id"`
-		Name        string                   `json:"name"`
-		Description *string                  `json:"description,omitempty"`
-		URL         *string                  `json:"url,omitempty"`
-		Ingredients []ingredients.Ingredient `json:"ingredients,omitempty"`
-	}
-
-	err := json.Unmarshal(data, &recipe)
-	if err != nil {
-		return fmt.Errorf("error unmarshaling recipe: %w", err)
-	}
-
-	r.id = recipe.ID
-	r.name = recipe.Name
-	r.description = recipe.Description
-	r.url = recipe.URL
-
-	if recipe.Ingredients == nil {
-		recipe.Ingredients = make([]ingredients.Ingredient, 0)
-	} else {
-		r.ingredients = recipe.Ingredients
-	}
-
-	return nil
+func (r Recipe) Slug() string {
+	return slug.Make(r.Title)
 }
 
 func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
-	name := faker.Adjective() + " " + faker.Dinner()
-	descrption := faker.LoremIpsumParagraph(1, 3, 6, " ")
+	title := faker.Adjective() + " " + faker.Dinner()
+	description := faker.LoremIpsumParagraph(2, 3, 5, ".")
+	headline := faker.LoremIpsumParagraph(2, 3, 5, ".")
+	steps := faker.LoremIpsumParagraph(2, 3, 5, ".")
 	url := faker.URL()
+	servings := faker.UintRange(1, 10)
+
+	tags := make([]string, 2)
+	for i := 0; i < len(tags); i++ {
+		tags[i] = faker.Word()
+	}
+
+	ingredients := make([]RecipeIngredient, 5)
+	for i := 0; i < len(ingredients); i++ {
+		ingredient, err := RecipeIngredient{}.Fake(faker)
+		if err != nil {
+			return nil, err
+		}
+
+		ingredients[i] = ingredient.(RecipeIngredient)
+	}
 
 	return Recipe{
-		id:          uuid.New(),
-		name:        name,
-		description: &descrption,
-		url:         &url,
-		ingredients: make([]ingredients.Ingredient, 0),
+		ID:          uuid.New(),
+		Title:       title,
+		Description: &description,
+		URL:         &url,
+		Tags:        tags,
+		Ingredients: ingredients,
+		Headline:    &headline,
+		Steps:       &steps,
+		Servings:    &servings,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}, nil
+}
+
+type RecipeIngredient struct {
+	ID       uuid.UUID `json:"id"`
+	Name     string    `json:"name"`
+	Kind     *string   `json:"kind"`
+	Unit     Unit      `json:"unit"`
+	Quantity float64   `json:"amount"`
+}
+
+func (ri RecipeIngredient) Fake(faker *gofakeit.Faker) (any, error) {
+	name := gofakeit.AdjectiveDescriptive() + " " + gofakeit.AdjectiveDescriptive() + " " + gofakeit.NounConcrete()
+	kind := faker.Adjective()
+	unit := faker.RandomString([]string{"g", "kg", "ml", "l", "tsp", "tbsp", "cup", "qt", "countable", "uncountable"})
+	quantity := faker.Float64Range(0.1, 1000)
+
+	return RecipeIngredient{
+		ID:       uuid.New(),
+		Name:     name,
+		Kind:     &kind,
+		Unit:     Unit(unit),
+		Quantity: quantity,
+	}, nil
+}
+
+type Unit string
+
+func (u Unit) String() string {
+	return string(u)
+}
+
+func (u Unit) Fake(faker *gofakeit.Faker) (any, error) {
+	return faker.RandomString([]string{"g", "kg", "ml", "l", "tsp", "tbsp", "cup", "qt", "countable", "uncountable"}), nil
+}
+
+const (
+	Kilo        Unit = "kilo"
+	Gram        Unit = "g"
+	Milligram   Unit = "mg"
+	Liter       Unit = "l"
+	Milliliter  Unit = "ml"
+	Teaspoon    Unit = "tsp"
+	Tablespoon  Unit = "tbsp"
+	Cup         Unit = "cup"
+	Quart       Unit = "qt"
+	Countable   Unit = "countable"
+	Uncountable Unit = "uncountable"
+)
+
+func NewUnit(s string) (Unit, error) {
+	if !isUnit(s) {
+		return "", errors.New("not a valid unit")
+	}
+
+	return Unit(s), nil
+}
+
+var (
+	Units = []Unit{
+		Kilo,
+		Gram,
+		Milligram,
+		Liter,
+		Milliliter,
+		Teaspoon,
+		Tablespoon,
+		Cup,
+		Quart,
+		Countable,
+		Uncountable,
+	}
+	UnitDisplayNames = map[Unit]string{
+		Kilo:        "kg",
+		Gram:        "g",
+		Milligram:   "mg",
+		Liter:       "L",
+		Teaspoon:    "tsp",
+		Tablespoon:  "tbsp",
+		Cup:         "cup",
+		Quart:       "qt",
+		Countable:   "unit(s)",
+		Uncountable: "some",
+	}
+)
+
+func UnitValidation(fl validator.FieldLevel) bool {
+	value := fl.Field().String()
+
+	return isUnit(value)
+}
+
+func isUnit(s string) bool {
+	for _, u := range Units {
+		if s == string(u) {
+			return true
+		}
+	}
+
+	return false
 }

@@ -1,5 +1,5 @@
-//nolint:wrapcheck,exhaustruct
-package usecases_test
+//nolint:exhaustruct
+package recipes_test
 
 import (
 	"context"
@@ -9,103 +9,31 @@ import (
 
 	"github.com/AlejandroHerr/cook-book-go/internal/common"
 	"github.com/AlejandroHerr/cook-book-go/internal/common/logging"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/dtos"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/model"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/usecases"
+	"github.com/AlejandroHerr/cook-book-go/internal/recipes"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
 type testServices struct {
-	mockTxm             *MockTransactionManager
-	mockRecipesRepo     *MockRecipesRepo
-	mockIngredientsRepo *MockIngredientsRepo
-	recipeUsecases      *usecases.RecipeUseCases
-}
-
-type MockTransactionManager struct {
-	mock.Mock
-}
-
-func (m *MockTransactionManager) Begin(ctx context.Context) (common.Transaction, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(common.Transaction), args.Error(1)
-}
-
-type MockTransaction struct {
-	mock.Mock
-}
-
-func (m *MockTransaction) Rollback() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MockTransaction) Commit() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MockTransaction) Transaction() interface{} {
-	return nil
-}
-
-type MockRecipesRepo struct {
-	mock.Mock
-}
-
-func (m *MockRecipesRepo) GetAll(ctx context.Context) ([]*model.Recipe, error) {
-	args := m.Called(ctx)
-	return args.Get(0).([]*model.Recipe), args.Error(1)
-}
-
-func (m *MockRecipesRepo) Create(ctx context.Context, recipe model.Recipe) (*model.Recipe, error) {
-	args := m.Called(ctx, recipe)
-	return args.Get(0).(*model.Recipe), args.Error(1)
-}
-
-func (m *MockRecipesRepo) GetByID(ctx context.Context, recipeID string) (*model.Recipe, error) {
-	args := m.Called(ctx, recipeID)
-	return args.Get(0).(*model.Recipe), args.Error(1)
-}
-
-func (m *MockRecipesRepo) GetBySlug(ctx context.Context, recipeSlug string) (*model.Recipe, error) {
-	args := m.Called(ctx, recipeSlug)
-	return args.Get(0).(*model.Recipe), args.Error(1)
-}
-
-func (m *MockRecipesRepo) Update(ctx context.Context, recipe model.Recipe) (*model.Recipe, error) {
-	args := m.Called(ctx, recipe)
-	return args.Get(0).(*model.Recipe), args.Error(1)
-}
-
-func (m *MockRecipesRepo) Delete(ctx context.Context, recipeID string) error {
-	args := m.Called(ctx, recipeID)
-	return args.Error(0)
-}
-
-type MockIngredientsRepo struct {
-	mock.Mock
-}
-
-func (m *MockIngredientsRepo) UpsertMany(ctx context.Context, names []string) ([]model.Ingredient, error) {
-	args := m.Called(ctx, names)
-	return args.Get(0).([]model.Ingredient), args.Error(1)
+	mockTxm             *common.MockTransactionManager
+	mockRecipesRepo     *recipes.MockRecipesRepo
+	mockIngredientsRepo *recipes.MockIngredientsRepo
+	useCases            *recipes.UseCases
 }
 
 func newTestServices() *testServices {
-	mockTxm := &MockTransactionManager{}
-	mockRecipesRepo := &MockRecipesRepo{}
-	mockIngredientsRepo := &MockIngredientsRepo{}
+	mockTxm := new(common.MockTransactionManager)
+	mockRecipesRepo := new(recipes.MockRecipesRepo)
+	mockIngredientsRepo := new(recipes.MockIngredientsRepo)
 
-	recipeUsecases := usecases.NewRecipesUseCases(mockTxm, mockRecipesRepo, mockIngredientsRepo, logging.NewVoidLogger())
+	useCases := recipes.NewUseCases(mockTxm, mockRecipesRepo, mockIngredientsRepo, logging.NewVoidLogger())
 
 	return &testServices{
 		mockTxm:             mockTxm,
 		mockRecipesRepo:     mockRecipesRepo,
 		mockIngredientsRepo: mockIngredientsRepo,
-		recipeUsecases:      recipeUsecases,
+		useCases:            useCases,
 	}
 }
 
@@ -114,10 +42,10 @@ func TestRecipesUseCases(t *testing.T) {
 		t.Parallel()
 		t.Run("returns the recipes from the repo", func(t *testing.T) {
 			services := newTestServices()
-			recipes := []*model.Recipe{{ID: uuid.New()}}
+			recipes := []*recipes.Recipe{{ID: uuid.New()}}
 			services.mockRecipesRepo.On("GetAll", mock.Anything).Return(recipes, nil)
 
-			result, err := services.recipeUsecases.GetAll(context.Background())
+			result, err := services.useCases.GetAll(context.Background())
 
 			require.NoError(t, err)
 			require.Equal(t, recipes, result)
@@ -129,9 +57,9 @@ func TestRecipesUseCases(t *testing.T) {
 		t.Run("when the recipes repo fails it returns an error", func(t *testing.T) {
 			services := newTestServices()
 			repoErr := errors.New("repo error")
-			services.mockRecipesRepo.On("GetAll", mock.Anything).Return([]*model.Recipe{}, repoErr)
+			services.mockRecipesRepo.On("GetAll", mock.Anything).Return([]*recipes.Recipe{}, repoErr)
 
-			_, err := services.recipeUsecases.GetAll(context.Background())
+			_, err := services.useCases.GetAll(context.Background())
 
 			require.Error(t, err)
 			require.ErrorIs(t, err, repoErr)
@@ -147,31 +75,27 @@ func TestRecipesUseCases(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
 
-			mockTransaction := &MockTransaction{}
+			mockTransaction := new(common.MockTransaction)
 			mockTransaction.On("Commit").Return(nil)
 			mockTransaction.On("Rollback").Return(nil)
 			services.mockTxm.On("Begin", mock.Anything, mock.Anything).Return(mockTransaction, nil)
 
-			ingredientNames := []string{"ingredient1", "ingredient2"}
-			recipeIngredients := []dtos.CreateRecipeIngredient{{Name: ingredientNames[0]}, {Name: ingredientNames[1]}}
-			dto := &dtos.CreateUpdateRecipeDTO{Ingredients: recipeIngredients}
-			created := &model.Recipe{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()} //nolint:exhaustruct
+			dto := &recipes.CreateUpdateRecipeDTO{Ingredients: []recipes.CreateRecipeIngredientDTO{{Name: "ingredient1"}, {Name: "ingredient2"}}}
+			created := &recipes.Recipe{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-			upsertedIngredients := []model.Ingredient{{ID: uuid.New(), Name: ingredientNames[0]}, {ID: uuid.New(), Name: ingredientNames[1]}}
-
-			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return(upsertedIngredients, nil)
+			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, nil)
 			services.mockRecipesRepo.On("Create", mock.Anything, mock.Anything).Return(created, nil)
 
-			got, err := services.recipeUsecases.Create(ctx, dto)
+			got, err := services.useCases.Create(ctx, dto)
 
 			require.NoError(t, err)
 			require.Equal(t, created, got)
 
 			services.mockIngredientsRepo.AssertNumberOfCalls(t, "UpsertMany", 1)
-			services.mockIngredientsRepo.AssertCalled(t, "UpsertMany", mock.Anything, ingredientNames)
+			services.mockIngredientsRepo.AssertCalled(t, "UpsertMany", mock.Anything, dto.Ingredients)
 
 			services.mockRecipesRepo.AssertNumberOfCalls(t, "Create", 1)
-			services.mockRecipesRepo.AssertCalled(t, "Create", mock.Anything, mock.AnythingOfType("model.Recipe"))
+			services.mockRecipesRepo.AssertCalled(t, "Create", mock.Anything, mock.AnythingOfType("recipes.Recipe"))
 
 			mockTransaction.AssertNumberOfCalls(t, "Commit", 1)
 			mockTransaction.AssertNumberOfCalls(t, "Rollback", 1)
@@ -184,17 +108,17 @@ func TestRecipesUseCases(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
 
-			mockTransaction := &MockTransaction{}
+			mockTransaction := new(common.MockTransaction)
 			mockTransaction.On("Rollback").Return(nil)
 			services.mockTxm.On("Begin", mock.Anything, mock.Anything).Return(mockTransaction, nil)
 
-			dto := &dtos.CreateUpdateRecipeDTO{Ingredients: []dtos.CreateRecipeIngredient{}}
+			dto := &recipes.CreateUpdateRecipeDTO{Ingredients: []recipes.CreateRecipeIngredientDTO{}}
 
 			repoErr := errors.New("repo error")
 
-			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]model.Ingredient{}, repoErr)
+			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, repoErr)
 
-			created, err := services.recipeUsecases.Create(ctx, dto)
+			created, err := services.useCases.Create(ctx, dto)
 
 			require.Error(t, err)
 			require.ErrorIs(t, err, repoErr)
@@ -214,18 +138,18 @@ func TestRecipesUseCases(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
 
-			mockTransaction := &MockTransaction{}
+			mockTransaction := new(common.MockTransaction)
 			mockTransaction.On("Rollback").Return(nil)
 			services.mockTxm.On("Begin", mock.Anything, mock.Anything).Return(mockTransaction, nil)
 
-			dto := &dtos.CreateUpdateRecipeDTO{Ingredients: []dtos.CreateRecipeIngredient{}}
+			dto := &recipes.CreateUpdateRecipeDTO{Ingredients: []recipes.CreateRecipeIngredientDTO{}}
 
 			repoErr := errors.New("repo error")
 
-			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]model.Ingredient{}, nil)
-			services.mockRecipesRepo.On("Create", mock.Anything, mock.Anything).Return(new(model.Recipe), repoErr)
+			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, nil)
+			services.mockRecipesRepo.On("Create", mock.Anything, mock.Anything).Return(new(recipes.Recipe), repoErr)
 
-			created, err := services.recipeUsecases.Create(ctx, dto)
+			created, err := services.useCases.Create(ctx, dto)
 
 			require.Error(t, err)
 			require.ErrorIs(t, err, repoErr)
@@ -259,10 +183,10 @@ func TestRecipesUseCases(t *testing.T) {
 				t.Run("returns the recipe from the repo", func(t *testing.T) {
 					ctx := context.Background()
 					services := newTestServices()
-					recipe := &model.Recipe{ID: uuid.New()}
+					recipe := &recipes.Recipe{ID: uuid.New()}
 					services.mockRecipesRepo.On(tc.method, mock.Anything, mock.Anything).Return(recipe, nil)
 
-					result, err := services.recipeUsecases.Get(ctx, tc.idOrSlug)
+					result, err := services.useCases.Get(ctx, tc.idOrSlug)
 
 					require.NoError(t, err)
 					require.Equal(t, recipe, result)
@@ -276,9 +200,9 @@ func TestRecipesUseCases(t *testing.T) {
 					ctx := context.Background()
 					services := newTestServices()
 					repoErr := errors.New("repo error")
-					services.mockRecipesRepo.On(tc.method, mock.Anything, mock.Anything).Return(&model.Recipe{}, repoErr)
+					services.mockRecipesRepo.On(tc.method, mock.Anything, mock.Anything).Return(&recipes.Recipe{}, repoErr)
 
-					_, err := services.recipeUsecases.Get(context.Background(), tc.idOrSlug)
+					_, err := services.useCases.Get(context.Background(), tc.idOrSlug)
 
 					require.Error(t, err)
 					require.ErrorIs(t, err, repoErr)
@@ -297,31 +221,28 @@ func TestRecipesUseCases(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
 
-			mockTransaction := &MockTransaction{}
+			mockTransaction := new(common.MockTransaction)
 			mockTransaction.On("Commit").Return(nil)
 			mockTransaction.On("Rollback").Return(nil)
 			services.mockTxm.On("Begin", mock.Anything, mock.Anything).Return(mockTransaction, nil)
 
-			ingredientNames := []string{"ingredient1", "ingredient2"}
-			recipeIngredients := []dtos.CreateRecipeIngredient{{Name: ingredientNames[0]}, {Name: ingredientNames[1]}}
-			dto := &dtos.CreateUpdateRecipeDTO{Ingredients: recipeIngredients}
-			expected := &model.Recipe{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()} //nolint:exhaustruct
+			id := uuid.New()
+			dto := &recipes.CreateUpdateRecipeDTO{Ingredients: []recipes.CreateRecipeIngredientDTO{{Name: "ingredient1"}, {Name: "ingredient2"}}}
+			created := &recipes.Recipe{ID: uuid.New(), CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-			upsertedIngredients := []model.Ingredient{{ID: uuid.New(), Name: ingredientNames[0]}, {ID: uuid.New(), Name: ingredientNames[1]}}
+			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, nil)
+			services.mockRecipesRepo.On("Update", mock.Anything, mock.Anything).Return(created, nil)
 
-			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return(upsertedIngredients, nil)
-			services.mockRecipesRepo.On("Update", mock.Anything, mock.Anything).Return(expected, nil)
-
-			got, err := services.recipeUsecases.Update(ctx, uuid.New(), dto)
+			got, err := services.useCases.Update(ctx, id, dto)
 
 			require.NoError(t, err)
 			require.NotNil(t, got)
 
 			services.mockIngredientsRepo.AssertNumberOfCalls(t, "UpsertMany", 1)
-			services.mockIngredientsRepo.AssertCalled(t, "UpsertMany", mock.Anything, ingredientNames)
+			services.mockIngredientsRepo.AssertCalled(t, "UpsertMany", mock.Anything, dto.Ingredients)
 
 			services.mockRecipesRepo.AssertNumberOfCalls(t, "Update", 1)
-			services.mockRecipesRepo.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("model.Recipe"))
+			services.mockRecipesRepo.AssertCalled(t, "Update", mock.Anything, mock.AnythingOfType("recipes.Recipe"))
 
 			mockTransaction.AssertNumberOfCalls(t, "Commit", 1)
 			mockTransaction.AssertNumberOfCalls(t, "Rollback", 1)
@@ -334,17 +255,17 @@ func TestRecipesUseCases(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
 
-			mockTransaction := &MockTransaction{}
+			mockTransaction := new(common.MockTransaction)
 			mockTransaction.On("Rollback").Return(nil)
 			services.mockTxm.On("Begin", mock.Anything, mock.Anything).Return(mockTransaction, nil)
 
-			dto := &dtos.CreateUpdateRecipeDTO{Ingredients: []dtos.CreateRecipeIngredient{}}
+			dto := &recipes.CreateUpdateRecipeDTO{Ingredients: []recipes.CreateRecipeIngredientDTO{}}
 
 			repoErr := errors.New("repo error")
 
-			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]model.Ingredient{}, repoErr)
+			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, repoErr)
 
-			created, err := services.recipeUsecases.Update(ctx, uuid.New(), dto)
+			created, err := services.useCases.Update(ctx, uuid.New(), dto)
 
 			require.Error(t, err)
 			require.ErrorIs(t, err, repoErr)
@@ -364,18 +285,18 @@ func TestRecipesUseCases(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
 
-			mockTransaction := &MockTransaction{}
+			mockTransaction := new(common.MockTransaction)
 			mockTransaction.On("Rollback").Return(nil)
 			services.mockTxm.On("Begin", mock.Anything, mock.Anything).Return(mockTransaction, nil)
 
-			dto := &dtos.CreateUpdateRecipeDTO{Ingredients: []dtos.CreateRecipeIngredient{}}
+			dto := &recipes.CreateUpdateRecipeDTO{Ingredients: []recipes.CreateRecipeIngredientDTO{}}
 
 			repoErr := errors.New("repo error")
 
-			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]model.Ingredient{}, nil)
-			services.mockRecipesRepo.On("Update", mock.Anything, mock.Anything).Return(new(model.Recipe), repoErr)
+			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, nil)
+			services.mockRecipesRepo.On("Update", mock.Anything, mock.Anything).Return(new(recipes.Recipe), repoErr)
 
-			created, err := services.recipeUsecases.Update(ctx, uuid.New(), dto)
+			created, err := services.useCases.Update(ctx, uuid.New(), dto)
 
 			require.Error(t, err)
 			require.ErrorIs(t, err, repoErr)
@@ -397,11 +318,11 @@ func TestRecipesUseCases(t *testing.T) {
 		t.Run("return no error if delete succeeds", func(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
-			recipe := &model.Recipe{ID: uuid.New()}
+			recipe := &recipes.Recipe{ID: uuid.New()}
 
 			services.mockRecipesRepo.On("Delete", mock.Anything, mock.Anything).Return(nil)
 
-			err := services.recipeUsecases.Delete(ctx, recipe.ID.String())
+			err := services.useCases.Delete(ctx, recipe.ID.String())
 
 			require.NoError(t, err)
 
@@ -413,11 +334,11 @@ func TestRecipesUseCases(t *testing.T) {
 		t.Run("returns an error if it fails", func(t *testing.T) {
 			ctx := context.Background()
 			services := newTestServices()
-			recipe := &model.Recipe{ID: uuid.New()}
+			recipe := &recipes.Recipe{ID: uuid.New()}
 			repoErr := errors.New("repo error")
 			services.mockRecipesRepo.On("Delete", mock.Anything, mock.Anything).Return(repoErr)
 
-			err := services.recipeUsecases.Delete(ctx, recipe.ID.String())
+			err := services.useCases.Delete(ctx, recipe.ID.String())
 
 			require.Error(t, err)
 			require.ErrorIs(t, err, repoErr)

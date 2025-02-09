@@ -9,10 +9,7 @@ import (
 
 	"github.com/AlejandroHerr/cook-book-go/internal/common/infra/db"
 	"github.com/AlejandroHerr/cook-book-go/internal/common/logging"
-	"github.com/AlejandroHerr/cook-book-go/internal/completions"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/http/routers"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/repo"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/usecases"
+	"github.com/AlejandroHerr/cook-book-go/internal/recipes"
 	"github.com/allegro/bigcache/v3"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
@@ -22,8 +19,8 @@ import (
 )
 
 type Config struct {
-	DB           db.Config
-	OpenAIConfig completions.OpenAIConfig
+	DB db.Config
+	// OpenAIConfig completions.OpenAIConfig
 }
 
 func main() {
@@ -64,11 +61,11 @@ func run() error {
 
 	sessionManager := db.NewPgxTransactionManager(dbPool)
 
-	ingredientsRepo := repo.NewPgIngredientsRepo(dbPool)
-	recipesRepo := repo.NewPgRecipesRepository(dbPool)
+	ingredientsRepo := recipes.NewPgIngredientsRepo(dbPool)
+	recipesRepo := recipes.NewPgRecipesRepository(dbPool)
 
-	recipesUseCases := usecases.NewRecipesUseCases(sessionManager, recipesRepo, ingredientsRepo, logger)
-	recipesRouter := routers.NewRecipesRouter(recipesUseCases)
+	recipesUseCases := recipes.NewUseCases(sessionManager, recipesRepo, ingredientsRepo, logger)
+	recipesRouter := recipes.NewRouter(recipesUseCases)
 
 	r := chi.NewRouter()
 

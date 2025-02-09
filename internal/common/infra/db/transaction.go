@@ -34,8 +34,6 @@ func (m *PgxTransactionManager) Begin(ctx context.Context) (common.Transaction, 
 		return nil, fmt.Errorf("begin transaction: %w", err)
 	}
 
-	fmt.Println("PgxTransactionManager Begin")
-
 	return &PgxTransaction{
 		ctx: ctx,
 		tx:  tx,

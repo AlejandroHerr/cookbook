@@ -1,23 +1,21 @@
-package routers
+package recipes
 
 import (
 	"context"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/AlejandroHerr/cook-book-go/internal/common"
 	"github.com/AlejandroHerr/cook-book-go/internal/common/api"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/dtos"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/model"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/usecases"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 )
 
-func NewRecipesRouter(useCases *usecases.RecipeUseCases) chi.Router {
+func NewRouter(useCases *UseCases) chi.Router {
 	r := chi.NewRouter()
 
 	r.Get("/", getAllRecipesHandler(useCases))
@@ -32,7 +30,7 @@ func NewRecipesRouter(useCases *usecases.RecipeUseCases) chi.Router {
 	return r
 }
 
-func getAllRecipesHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
+func getAllRecipesHandler(useCases *UseCases) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		list, err := useCases.GetAll(r.Context())
 		if err != nil {
@@ -47,7 +45,7 @@ func getAllRecipesHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
 	}
 }
 
-func createRecipeHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
+func createRecipeHandler(useCases *UseCases) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		request := makeCreateUpdateRecipeRequest()
 		if err := render.Bind(r, request); err != nil {
@@ -90,7 +88,7 @@ func createRecipeHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
 
 type recipeCtxKey struct{}
 
-func recipeCtx(useCases *usecases.RecipeUseCases) func(http.Handler) http.Handler {
+func recipeCtx(useCases *UseCases) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			recipeIDSlug := chi.URLParam(r, "recipeIDSlug")
@@ -115,7 +113,7 @@ func recipeCtx(useCases *usecases.RecipeUseCases) func(http.Handler) http.Handle
 }
 
 func getRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	recipe, ok := r.Context().Value(recipeCtxKey{}).(*model.Recipe)
+	recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 	if !ok {
 		render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
 		return
@@ -127,9 +125,9 @@ func getRecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func updateRecipeHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
+func updateRecipeHandler(useCases *UseCases) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		recipe, ok := r.Context().Value(recipeCtxKey{}).(*model.Recipe)
+		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 		if !ok {
 			render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
 			return
@@ -174,9 +172,9 @@ func updateRecipeHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
 	}
 }
 
-func deleteRecipeHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
+func deleteRecipeHandler(useCases *UseCases) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		recipe, ok := r.Context().Value(recipeCtxKey{}).(*model.Recipe)
+		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 		if !ok {
 			render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
 			return
@@ -190,6 +188,24 @@ func deleteRecipeHandler(useCases *usecases.RecipeUseCases) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusNoContent)
 	}
+}
+
+var (
+	once     sync.Once
+	validate *validator.Validate
+)
+
+func Validator() *validator.Validate {
+	once.Do(func() {
+		validate = validator.New(validator.WithRequiredStructEnabled())
+
+		err := validate.RegisterValidation("is-unit", UnitValidation)
+		if err != nil {
+			panic(err)
+		}
+	})
+
+	return validate
 }
 
 type RecipeWithoutIngredients struct {
@@ -214,7 +230,7 @@ func (res GetRecipesResponse) Render(_ http.ResponseWriter, _ *http.Request) err
 	return nil
 }
 
-func MakeGetRecipesResponse(recipes []*model.Recipe) *GetRecipesResponse {
+func MakeGetRecipesResponse(recipes []*Recipe) *GetRecipesResponse {
 	list := []*RecipeWithoutIngredients{}
 	for _, r := range recipes {
 		list = append(list, &RecipeWithoutIngredients{
@@ -236,17 +252,17 @@ func MakeGetRecipesResponse(recipes []*model.Recipe) *GetRecipesResponse {
 }
 
 type createUpdateRecipeRequest struct {
-	*dtos.CreateUpdateRecipeDTO
+	*CreateUpdateRecipeDTO
 }
 
 func makeCreateUpdateRecipeRequest() *createUpdateRecipeRequest {
 	return &createUpdateRecipeRequest{
-		CreateUpdateRecipeDTO: &dtos.CreateUpdateRecipeDTO{}, //nolint:exhaustruct
+		CreateUpdateRecipeDTO: &CreateUpdateRecipeDTO{}, //nolint:exhaustruct
 	}
 }
 
 func (req createUpdateRecipeRequest) Bind(_ *http.Request) error {
-	if err := common.Validator().Struct(req); err != nil {
+	if err := Validator().Struct(req); err != nil {
 		return err //nolint:wrapcheck
 	}
 
@@ -254,11 +270,11 @@ func (req createUpdateRecipeRequest) Bind(_ *http.Request) error {
 }
 
 type CreateRecipeResponse struct {
-	*model.Recipe
+	*Recipe
 	Slug string `json:"slug"`
 }
 
-func makeCreateRecipeResponse(recipe *model.Recipe) *CreateRecipeResponse {
+func makeCreateRecipeResponse(recipe *Recipe) *CreateRecipeResponse {
 	return &CreateRecipeResponse{
 		Recipe: recipe,
 		Slug:   recipe.Slug(),
@@ -272,11 +288,11 @@ func (res CreateRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) e
 }
 
 type GetRecipeResponse struct {
-	*model.Recipe
+	*Recipe
 	Slug string `json:"slug"`
 }
 
-func makeGetRecipeResponse(recipe *model.Recipe) *GetRecipeResponse {
+func makeGetRecipeResponse(recipe *Recipe) *GetRecipeResponse {
 	return &GetRecipeResponse{
 		Recipe: recipe,
 		Slug:   recipe.Slug(),
@@ -288,11 +304,11 @@ func (res GetRecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) erro
 }
 
 type UpdateRecipeResponse struct {
-	*model.Recipe
+	*Recipe
 	Slug string `json:"slug"`
 }
 
-func makeUpdateUpdateRecipeResponse(recipe *model.Recipe) *UpdateRecipeResponse {
+func makeUpdateUpdateRecipeResponse(recipe *Recipe) *UpdateRecipeResponse {
 	return &UpdateRecipeResponse{
 		Recipe: recipe,
 		Slug:   recipe.Slug(),

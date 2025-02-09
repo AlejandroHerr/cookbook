@@ -1,13 +1,10 @@
-package repo
+package recipes
 
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/AlejandroHerr/cook-book-go/internal/common/infra/db"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/model"
-	"github.com/AlejandroHerr/cook-book-go/internal/core/usecases"
 	"github.com/google/uuid"
 
 	"github.com/jackc/pgx/v5"
@@ -18,7 +15,7 @@ type PgRecipesRepo struct {
 	pool *pgxpool.Pool
 }
 
-var _ usecases.RecipesRepo = (*PgRecipesRepo)(nil)
+var _ RecipesRepo = (*PgRecipesRepo)(nil)
 
 func NewPgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
 	return &PgRecipesRepo{
@@ -26,20 +23,7 @@ func NewPgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
 	}
 }
 
-type pgRecipe struct {
-	ID          uuid.UUID
-	Title       string
-	Headline    *string
-	Description *string
-	Steps       *string
-	Servings    *uint
-	URL         *string
-	Tags        []string
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
-}
-
-func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]*model.Recipe, error) {
+func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]*Recipe, error) {
 	query := `
     SELECT
       id, title, headline, description, steps, servings, url, tags, created_at, updated_at
@@ -53,10 +37,10 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]*model.Recipe, error) {
 	}
 	defer rows.Close()
 
-	recipes := make([]*model.Recipe, 0)
+	recipes := make([]*Recipe, 0)
 
 	for rows.Next() {
-		recipe := new(model.Recipe)
+		recipe := new(Recipe)
 
 		if err := rows.Scan(
 			&recipe.ID,
@@ -82,15 +66,15 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]*model.Recipe, error) {
 	return recipes, nil
 }
 
-func (repo PgRecipesRepo) GetByID(ctx context.Context, recipeID string) (*model.Recipe, error) {
+func (repo PgRecipesRepo) GetByID(ctx context.Context, recipeID string) (*Recipe, error) {
 	return repo.get(ctx, "id", recipeID)
 }
 
-func (repo PgRecipesRepo) GetBySlug(ctx context.Context, slug string) (*model.Recipe, error) {
+func (repo PgRecipesRepo) GetBySlug(ctx context.Context, slug string) (*Recipe, error) {
 	return repo.get(ctx, "slug", slug)
 }
 
-func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (*model.Recipe, error) {
+func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (*Recipe, error) {
 	query := `
     SELECT 
       id, title, headline, description, steps, servings, url, tags, created_at, updated_at
@@ -100,7 +84,7 @@ func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (
   `
 	row := repo.pool.QueryRow(ctx, query, value)
 
-	recipe := new(model.Recipe)
+	recipe := new(Recipe)
 
 	if err := row.Scan(
 		&recipe.ID,
@@ -127,7 +111,7 @@ func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (
 	return recipe, nil
 }
 
-func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uuid.UUID) ([]model.RecipeIngredient, error) {
+func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uuid.UUID) ([]RecipeIngredient, error) {
 	query := `
     SELECT 
       i.id, i.name, i.kind, ri.unit, ri.quantity
@@ -144,10 +128,10 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
 	}
 	defer rows.Close()
 
-	ingredients := make([]model.RecipeIngredient, 0)
+	ingredients := make([]RecipeIngredient, 0)
 
 	for rows.Next() {
-		ri := model.RecipeIngredient{} //nolint: exhaustruct
+		ri := RecipeIngredient{} //nolint: exhaustruct
 
 		err := rows.Scan(&ri.ID, &ri.Name, &ri.Kind, &ri.Unit, &ri.Quantity)
 		if err != nil {
@@ -160,7 +144,7 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
 	return ingredients, nil
 }
 
-func (repo PgRecipesRepo) Create(ctx context.Context, recipe model.Recipe) (*model.Recipe, error) {
+func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, error) {
 	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
 
 	sql := `
@@ -185,7 +169,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe model.Recipe) (*mod
 
 	row := executor.QueryRow(ctx, sql, values)
 
-	createdRecipe := new(model.Recipe)
+	createdRecipe := new(Recipe)
 	if err := row.Scan(
 		&createdRecipe.ID,
 		&createdRecipe.Title,
@@ -211,22 +195,8 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe model.Recipe) (*mod
 	return createdRecipe, nil
 }
 
-func (repo PgRecipesRepo) Update(ctx context.Context, recipe model.Recipe) (*model.Recipe, error) {
+func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, error) {
 	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
-
-	_, err := executor.Exec(
-		ctx,
-		"DELETE FROM recipe_ingredients WHERE recipe_id = $1",
-		recipe.ID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("deleting recipe ingredients: %w", db.HandlePgError(err))
-	}
-
-	err = repo.insertRecipeIngredients(ctx, executor, recipe.ID, recipe.Ingredients)
-	if err != nil {
-		return nil, fmt.Errorf("inserting recipe ingredients: %w", db.HandlePgError(err))
-	}
 
 	sql := `
     UPDATE 
@@ -260,7 +230,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe model.Recipe) (*mod
 
 	row := executor.QueryRow(ctx, sql, values)
 
-	updatedRecipe := new(model.Recipe)
+	updatedRecipe := new(Recipe)
 
 	if err := row.Scan(
 		&updatedRecipe.ID,
@@ -275,6 +245,20 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe model.Recipe) (*mod
 		&updatedRecipe.UpdatedAt,
 	); err != nil {
 		return nil, fmt.Errorf("executing update recipe query: %w", db.HandlePgError(err))
+	}
+
+	_, err := executor.Exec(
+		ctx,
+		"DELETE FROM recipe_ingredients WHERE recipe_id = $1",
+		recipe.ID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("deleting recipe ingredients: %w", db.HandlePgError(err))
+	}
+
+	err = repo.insertRecipeIngredients(ctx, executor, recipe.ID, recipe.Ingredients)
+	if err != nil {
+		return nil, fmt.Errorf("inserting recipe ingredients: %w", db.HandlePgError(err))
 	}
 
 	updatedRecipe.Ingredients = recipe.Ingredients
@@ -295,7 +279,7 @@ func (repo PgRecipesRepo) Delete(ctx context.Context, recipeID string) error {
 	return nil
 }
 
-func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor db.BatcherExecutorQuerier, recipeID uuid.UUID, ingredients []model.RecipeIngredient) error {
+func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor db.BatcherExecutorQuerier, recipeID uuid.UUID, ingredients []RecipeIngredient) error {
 	batch := &pgx.Batch{} //nolint: exhaustruct
 	recipeIngredientsQuery := `
     INSERT INTO
