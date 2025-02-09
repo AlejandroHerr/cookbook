@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common/logging"
 	"github.com/jackc/pgx/v5"
 )
 

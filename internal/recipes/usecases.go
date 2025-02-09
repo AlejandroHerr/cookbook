@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common"
-	"github.com/AlejandroHerr/cook-book-go/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common"
+	"github.com/AlejandroHerr/cookbook/internal/common/logging"
 	"github.com/google/uuid"
 )
 

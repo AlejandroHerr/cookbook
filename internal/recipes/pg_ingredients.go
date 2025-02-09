@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common/infra/db"
+	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

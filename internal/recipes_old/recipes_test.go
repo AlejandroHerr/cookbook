@@ -1,17 +1,17 @@
-package ingredients_test
+package recipes_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/AlejandroHerr/cookbook/internal/infra"
-	"github.com/AlejandroHerr/cookbook/internal/ingredients"
+	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 var (
 	testDBPool *pgxpool.Pool
-	fixtures   *ingredients.Fixtures
+	fixtures   *recipes.Fixtures
 )
 
 func TestMain(m *testing.M) {
@@ -20,10 +20,10 @@ func TestMain(m *testing.M) {
 	testDBPool = infra.ConnectToTestDB(ctx)
 	defer testDBPool.Close()
 
-	fixtures = ingredients.GenerateFixtures(10)
+	fixtures = recipes.GenerateFixtures(10)
 
-	ingredients.LoadFixtures(ctx, testDBPool, fixtures)
-	defer ingredients.CleanupFixtures(ctx, testDBPool)
+	recipes.LoadFixtures(ctx, testDBPool, fixtures)
+	defer recipes.CleanupFixtures(ctx, testDBPool)
 
 	m.Run()
 }

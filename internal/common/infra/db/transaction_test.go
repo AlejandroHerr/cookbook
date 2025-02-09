@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common"
-	"github.com/AlejandroHerr/cook-book-go/internal/common/infra/db"
+	"github.com/AlejandroHerr/cookbook/internal/common"
+	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

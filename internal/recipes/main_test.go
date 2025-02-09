@@ -6,8 +6,8 @@ import (
 	"log"
 	"testing"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common/testutil"
-	"github.com/AlejandroHerr/cook-book-go/internal/recipes"
+	"github.com/AlejandroHerr/cookbook/internal/common/testutil"
+	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )

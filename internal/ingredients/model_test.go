@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/ingredients"
+	"github.com/AlejandroHerr/cookbook/internal/ingredients"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

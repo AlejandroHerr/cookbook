@@ -1,4 +1,4 @@
-package ingredients
+package i
 
 import (
 	"encoding/json"

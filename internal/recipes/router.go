@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common"
-	"github.com/AlejandroHerr/cook-book-go/internal/common/api"
+	"github.com/AlejandroHerr/cookbook/internal/common"
+	"github.com/AlejandroHerr/cookbook/internal/common/api"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"

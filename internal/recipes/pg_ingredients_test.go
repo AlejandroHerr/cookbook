@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common/testutil"
-	"github.com/AlejandroHerr/cook-book-go/internal/recipes"
+	"github.com/AlejandroHerr/cookbook/internal/common/testutil"
+	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )

@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common/infra/db"
-	"github.com/AlejandroHerr/cook-book-go/internal/common/logging"
-	"github.com/AlejandroHerr/cook-book-go/internal/recipes"
+	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
+	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/allegro/bigcache/v3"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"

@@ -3,8 +3,8 @@ package ingredients_test
 import (
 	"testing"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/core"
-	"github.com/AlejandroHerr/cook-book-go/internal/ingredients"
+	"github.com/AlejandroHerr/cookbook/internal/core"
+	"github.com/AlejandroHerr/cookbook/internal/ingredients"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/AlejandroHerr/cook-book-go/internal/common"
-	"github.com/AlejandroHerr/cook-book-go/internal/common/logging"
-	"github.com/AlejandroHerr/cook-book-go/internal/recipes"
+	"github.com/AlejandroHerr/cookbook/internal/common"
+	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

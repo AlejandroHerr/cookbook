@@ -1,4 +1,4 @@
-module github.com/AlejandroHerr/cook-book-go
+module github.com/AlejandroHerr/cookbook
 
 go 1.23.5
 
