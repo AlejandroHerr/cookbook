@@ -17,6 +17,7 @@ type (
 		Err error
 	}
 	HTTPClientError struct {
+		Err        error
 		StatusCode int    `json:"statusCode"`
 		Response   string `json:"response"`
 	}
@@ -34,7 +35,7 @@ type HTTPScrapper struct{}
 
 var _ Scrapper = (*HTTPScrapper)(nil)
 
-func NewHTTPScrapper() *HTTPScrapper {
+func MakeHTTPScrapper() *HTTPScrapper {
 	return &HTTPScrapper{}
 }
 
@@ -62,7 +63,7 @@ func (s HTTPScrapper) Scrap(ctx context.Context, url string) (string, error) {
 			return "", fmt.Errorf("read response: %w", err)
 		}
 
-		return "", &HTTPClientError{StatusCode: res.StatusCode, Response: response.String()}
+		return "", &HTTPClientError{Err: err, StatusCode: res.StatusCode, Response: response.String()}
 	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)

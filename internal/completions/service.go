@@ -19,16 +19,15 @@ type OpenAIService struct {
 	openAiClient *openai.Client
 }
 
-var _ Completer = (*OpenAIService)(nil)
+var _ AIService = (*OpenAIService)(nil)
 
-func NewOpenAIService(config *OpenAIConfig) *OpenAIService {
+func MakeOpenAIService(config *OpenAIConfig) *OpenAIService {
 	return &OpenAIService{
 		openAiClient: openai.NewClient(config.OpenAIKey),
 	}
 }
 
 const (
-	//nolint: lll,unused
 	recipePrompt = `Please extract the title and ingredients and some tags to categorize it from this recipe.
   For ingredients please provide:
     - name of the ingredient
@@ -37,7 +36,6 @@ const (
     - think if the unit must be 'units', ie a countable of the whole, or just it has no unit because it is uncountable.If it is uncountalbe just write none.
   Also tag the recipe, think about the origin of the food, the kind of diet , if it's for winter, kind of food (ie, soup, meal, breakfast)
   Answer everything only in english. If the text provided is not a recipe, do not invent.`
-	//nolint: lll
 	recipePromptV2 = `Please analyze the recipe I’m providing and return:
 The title
 A 2-line heading of the recipe, highlighting the most important characteristics of the dish being prepared.
@@ -59,21 +57,21 @@ func (s OpenAIService) CompleteRecipe(ctx context.Context, content string) (*Rec
 		return nil, fmt.Errorf("error generating schema: %w", err)
 	}
 
-	res, err := s.openAiClient.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
+	res, err := s.openAiClient.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{ //nolint:exhaustruct
 		Model: openai.GPT4o20240806,
 		Messages: []openai.ChatCompletionMessage{
-			{
+			{ //nolint:exhaustruct
 				Role:    openai.ChatMessageRoleSystem,
 				Content: recipePromptV2,
 			},
-			{
+			{ //nolint:exhaustruct
 				Role:    openai.ChatMessageRoleUser,
 				Content: content,
 			},
 		},
 		ResponseFormat: &openai.ChatCompletionResponseFormat{
 			Type: openai.ChatCompletionResponseFormatTypeJSONSchema,
-			JSONSchema: &openai.ChatCompletionResponseFormatJSONSchema{
+			JSONSchema: &openai.ChatCompletionResponseFormatJSONSchema{ //nolint:exhaustruct
 				Name:   "Recipe",
 				Schema: schema,
 				Strict: true,

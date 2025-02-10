@@ -1,6 +1,6 @@
 module github.com/AlejandroHerr/cookbook
 
-go 1.23.5
+go 1.23.6
 
 require (
 	github.com/PuerkitoBio/goquery v1.10.0
@@ -13,7 +13,7 @@ require (
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
-	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/joho/godotenv v1.5.1
 	github.com/sashabaranov/go-openai v1.35.7
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
@@ -29,7 +29,6 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect

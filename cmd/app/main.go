@@ -9,6 +9,7 @@ import (
 
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/allegro/bigcache/v3"
 	"github.com/caarlos0/env/v11"
@@ -19,8 +20,8 @@ import (
 )
 
 type Config struct {
-	DB db.Config
-	// OpenAIConfig completions.OpenAIConfig
+	DB           *db.Config
+	OpenAIConfig *completions.OpenAIConfig
 }
 
 func main() {
@@ -44,7 +45,7 @@ func run() error {
 
 	dbPool, err := db.Connect(
 		context.Background(),
-		&config.DB,
+		config.DB,
 		0,
 		dbLogger,
 	)
@@ -53,19 +54,24 @@ func run() error {
 	}
 	defer dbPool.Close()
 
+	// Declare Recipes Router
+	sessionManager := db.MakePgxTransactionManager(dbPool)
+	ingredientsRepo := recipes.MakePgIngredientsRepo(dbPool)
+	recipesRepo := recipes.MakePgRecipesRepository(dbPool)
+	recipesUseCases := recipes.MakeUseCases(sessionManager, recipesRepo, ingredientsRepo, logger)
+	recipesRouter := recipes.MakeRouter(recipesUseCases)
+
+	// Declare Completions Router
 	cache, err := bigcache.New(context.Background(), bigcache.DefaultConfig(time.Hour))
 	if err != nil {
 		return fmt.Errorf("error creating cache: %w", err)
 	}
 	defer cache.Close()
 
-	sessionManager := db.NewPgxTransactionManager(dbPool)
-
-	ingredientsRepo := recipes.NewPgIngredientsRepo(dbPool)
-	recipesRepo := recipes.NewPgRecipesRepository(dbPool)
-
-	recipesUseCases := recipes.NewUseCases(sessionManager, recipesRepo, ingredientsRepo, logger)
-	recipesRouter := recipes.NewRouter(recipesUseCases)
+	scrapper := completions.MakeHTTPScrapper()
+	aiService := completions.MakeOpenAIService(config.OpenAIConfig)
+	completionsUseCases := completions.MakeUseCases(cache, scrapper, aiService, logger)
+	completionsRouter := completions.MakeRouter(completionsUseCases)
 
 	r := chi.NewRouter()
 
@@ -80,6 +86,7 @@ func run() error {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Mount("/recipes", recipesRouter)
+	r.Mount("/completions", completionsRouter)
 
 	server := &http.Server{ //nolint: exhaustruct
 		Addr:              ":8080",
@@ -98,7 +105,10 @@ func run() error {
 }
 
 func loadConfig() (*Config, error) {
-	config := &Config{} //nolint:exhaustruct
+	config := &Config{
+		DB:           &db.Config{},                //nolint:exhaustruct
+		OpenAIConfig: &completions.OpenAIConfig{}, //nolint:exhaustruct
+	}
 	if err := env.Parse(config); err != nil {
 		return nil, fmt.Errorf("error parsing config: %w", err)
 	}

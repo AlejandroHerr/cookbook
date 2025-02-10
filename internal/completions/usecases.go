@@ -6,35 +6,39 @@ import (
 	"fmt"
 
 	"github.com/AlejandroHerr/cookbook/internal/common/logging"
-	"github.com/allegro/bigcache/v3"
 )
+
+type Cache interface {
+	Get(key string) ([]byte, error)
+	Set(key string, entry []byte) error
+}
 
 type Scrapper interface {
 	Scrap(ctx context.Context, url string) (string, error)
 }
 
-type Completer interface {
+type AIService interface {
 	CompleteRecipe(ctx context.Context, content string) (*Recipe, error)
 }
 
 type UseCases struct {
-	cache          *bigcache.BigCache
-	scrapper       Scrapper
-	recipeAnalyser Completer
-	logger         logging.Logger
+	cache     Cache
+	scrapper  Scrapper
+	aiService AIService
+	logger    logging.Logger
 }
 
-func NewUseCases(
-	cache *bigcache.BigCache,
+func MakeUseCases(
+	cache Cache,
 	scrapper Scrapper,
-	recipeAnalyser Completer,
+	recipeAnalyser AIService,
 	logger logging.Logger,
 ) *UseCases {
 	return &UseCases{
-		cache:          cache,
-		scrapper:       scrapper,
-		recipeAnalyser: recipeAnalyser,
-		logger:         logger,
+		cache:     cache,
+		scrapper:  scrapper,
+		aiService: recipeAnalyser,
+		logger:    logger,
 	}
 }
 
@@ -57,7 +61,7 @@ func (u UseCases) CompleteRecipe(ctx context.Context, url string) (*Recipe, erro
 		return nil, fmt.Errorf("error scrapping url %s: %w", url, err)
 	}
 
-	completion, err := u.recipeAnalyser.CompleteRecipe(ctx, content)
+	completion, err := u.aiService.CompleteRecipe(ctx, content)
 	if err != nil {
 		return nil, fmt.Errorf("error getting completions for url %s: %w", url, err)
 	}

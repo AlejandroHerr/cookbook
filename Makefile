@@ -1,7 +1,8 @@
 include .env
 
 live/server:
-	source .env && go run cmd/app/main.go 
+	set -a; source .env; set +a; \
+		go run cmd/app/main.go 
 
 db/up:
 	source .env && docker compose --env-file .env -p cookbook up db -d
