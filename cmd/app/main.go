@@ -11,6 +11,7 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/common/logging"
 	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
+	"github.com/AlejandroHerr/cookbook/internal/suggestions"
 	"github.com/allegro/bigcache/v3"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
@@ -61,6 +62,11 @@ func run() error {
 	recipesUseCases := recipes.MakeUseCases(sessionManager, recipesRepo, ingredientsRepo, logger)
 	recipesRouter := recipes.MakeRouter(recipesUseCases)
 
+	// Declare Suggestions Router
+	suggestionsRepo := suggestions.MakePgSuggestionsRepo(dbPool)
+	suggestionsUseCases := suggestions.MakeUseCases(suggestionsRepo)
+	suggestionsRouter := suggestions.MakeRouter(suggestionsUseCases)
+
 	// Declare Completions Router
 	cache, err := bigcache.New(context.Background(), bigcache.DefaultConfig(time.Hour))
 	if err != nil {
@@ -86,6 +92,7 @@ func run() error {
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 
 	r.Mount("/recipes", recipesRouter)
+	r.Mount("/suggestions", suggestionsRouter)
 	r.Mount("/completions", completionsRouter)
 
 	server := &http.Server{ //nolint: exhaustruct

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/AlejandroHerr/cookbook/internal/core/model"
+	"github.com/AlejandroHerr/cookbook/internal/recipes"
 )
 
 type Repo interface {
@@ -19,7 +19,7 @@ type UseCases struct {
 	repo Repo
 }
 
-func NewSuggestionsUseCases(repo Repo) *UseCases {
+func MakeUseCases(repo Repo) *UseCases {
 	return &UseCases{
 		repo: repo,
 	}
@@ -67,14 +67,14 @@ func (u UseCases) GetIngredientsOptions(ctx context.Context, search string) ([]O
 
 var (
 	once        sync.Once
-	unitOptions = make([]Option, len(model.Units))
+	unitOptions = make([]Option, len(recipes.Units))
 )
 
 func (u UseCases) GetUnitsOptions(context.Context) ([]Option, error) {
 	once.Do(func() {
-		for i, u := range model.Units {
+		for i, u := range recipes.Units {
 			unitOptions[i] = Option{
-				Label: model.UnitDisplayNames[u],
+				Label: recipes.UnitDisplayNames[u],
 				Value: u.String(),
 			}
 		}

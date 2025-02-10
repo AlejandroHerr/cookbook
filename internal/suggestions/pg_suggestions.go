@@ -13,7 +13,7 @@ type PgSuggestionsRepo struct {
 
 var _ Repo = (*PgSuggestionsRepo)(nil)
 
-func NewPgSuggestionsRepository(pool *pgxpool.Pool) *PgSuggestionsRepo {
+func MakePgSuggestionsRepo(pool *pgxpool.Pool) *PgSuggestionsRepo {
 	return &PgSuggestionsRepo{
 		pool: pool,
 	}
@@ -87,14 +87,15 @@ func (repo PgSuggestionsRepo) FindAllIngredients(ctx context.Context) ([]Option,
 	return repo.findOptions(ctx, query)
 }
 
-func (r PgSuggestionsRepo) findOptions(ctx context.Context, query string, args ...any) ([]Option, error) {
-	rows, err := r.pool.Query(ctx, query, args...)
+func (repo PgSuggestionsRepo) findOptions(ctx context.Context, query string, args ...any) ([]Option, error) {
+	rows, err := repo.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("execute query: %w", err)
 	}
 	defer rows.Close()
 
 	options := make([]Option, 0)
+
 	for rows.Next() {
 		var n string
 		if err := rows.Scan(&n); err != nil {
