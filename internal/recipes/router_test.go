@@ -33,20 +33,20 @@ func setupTestServer(t *testing.T) *testServer {
 	t.Helper()
 
 	// Initialize repositories
-	recipesRepo := recipes.NewPgRecipesRepository(pgPool)
-	ingredientsRepo := recipes.NewPgIngredientsRepo(pgPool)
+	recipesRepo := recipes.MakePgRecipesRepository(pgPool)
+	ingredientsRepo := recipes.MakePgIngredientsRepo(pgPool)
 
 	// Initialize transaction manager
-	transactionManager := db.NewPgxTransactionManager(pgPool)
+	transactionManager := db.MakePgxTransactionManager(pgPool)
 
 	// Initialize VoidLogger
 	logger := logging.NewVoidLogger()
 
 	// Initialize services
-	useCases := recipes.NewUseCases(transactionManager, recipesRepo, ingredientsRepo, logger)
+	useCases := recipes.MakeUseCases(transactionManager, recipesRepo, ingredientsRepo, logger)
 
 	// Initialize handlers
-	recipesRouter := recipes.NewRouter(useCases)
+	recipesRouter := recipes.MakeRouter(useCases)
 
 	// Initialize router
 	r := chi.NewRouter()

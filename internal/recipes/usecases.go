@@ -29,7 +29,7 @@ type UseCases struct {
 	logger             logging.Logger
 }
 
-func NewUseCases(
+func MakeUseCases(
 	transactionManager common.TransactionManager,
 	recipesRepo RecipesRepo,
 	ingredientsRepo IngredientsRepo,

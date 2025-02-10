@@ -15,7 +15,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewRouter(useCases *UseCases) chi.Router {
+func MakeRouter(useCases *UseCases) chi.Router {
 	r := chi.NewRouter()
 
 	r.Get("/", getAllRecipesHandler(useCases))

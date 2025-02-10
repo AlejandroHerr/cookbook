@@ -27,7 +27,7 @@ func newTestServices() *testServices {
 	mockRecipesRepo := new(recipes.MockRecipesRepo)
 	mockIngredientsRepo := new(recipes.MockIngredientsRepo)
 
-	useCases := recipes.NewUseCases(mockTxm, mockRecipesRepo, mockIngredientsRepo, logging.NewVoidLogger())
+	useCases := recipes.MakeUseCases(mockTxm, mockRecipesRepo, mockIngredientsRepo, logging.NewVoidLogger())
 
 	return &testServices{
 		mockTxm:             mockTxm,

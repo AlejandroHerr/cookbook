@@ -22,7 +22,7 @@ type PgxTransactionManager struct {
 	pool PgxPool
 }
 
-func NewPgxTransactionManager(pool PgxPool) *PgxTransactionManager {
+func MakePgxTransactionManager(pool PgxPool) *PgxTransactionManager {
 	return &PgxTransactionManager{
 		pool: pool,
 	}

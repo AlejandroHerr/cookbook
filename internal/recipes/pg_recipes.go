@@ -17,7 +17,7 @@ type PgRecipesRepo struct {
 
 var _ RecipesRepo = (*PgRecipesRepo)(nil)
 
-func NewPgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
+func MakePgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
 	return &PgRecipesRepo{
 		pool: pool,
 	}

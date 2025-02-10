@@ -1,0 +1,19 @@
+packages:
+  - path: "github.com/AlejandroHerr/cookbook/internal/core/model"
+    type_mappings:
+      time.Time: "string /* RFC3339 */"
+      null.String: "null | string"
+      null.Bool: "null | boolean"
+      uuid.UUID: "string /* uuid */"
+      uuid.NullUUID: "null | string /* uuid */"
+    output_path: "./go-cookbok-react/src//types/internal/model"
+  - path: "github.com/AlejandroHerr/cookbook/internal/core/http/routers"
+    type_mappings:
+      time.Time: "string /* RFC3339 */"
+      null.String: "null | string"
+      null.Bool: "null | boolean"
+      uuid.UUID: "string /* uuid */"
+      uuid.NullUUID: "null | string /* uuid */"
+    output_path: "./go-cookbok-react/src/types/routes"
+    frontmatter: |
+      import * as model from "../internal/model"

@@ -39,7 +39,7 @@ func TestPgxTransactionManager(t *testing.T) {
 		t.Parallel()
 
 		mocks := setup()
-		m := db.NewPgxTransactionManager(mocks.mockPool)
+		m := db.MakePgxTransactionManager(mocks.mockPool)
 
 		transaction, err := m.Begin(context.Background())
 		require.NoError(t, err)
@@ -69,7 +69,7 @@ func TestPgxTransactionManager(t *testing.T) {
 
 		t.Run("returns the pgx.Tx if present in the context", func(t *testing.T) {
 			mocks := setup()
-			m := db.NewPgxTransactionManager(mocks.mockPool)
+			m := db.MakePgxTransactionManager(mocks.mockPool)
 
 			transaction, err := m.Begin(context.Background())
 			require.NoError(t, err)

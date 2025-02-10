@@ -11,7 +11,7 @@ import (
 )
 
 func TestPgIngredients(t *testing.T) {
-	repo := recipes.NewPgIngredientsRepo(pgPool)
+	repo := recipes.MakePgIngredientsRepo(pgPool)
 
 	t.Run("UpsertMany", func(t *testing.T) {
 		t.Parallel()

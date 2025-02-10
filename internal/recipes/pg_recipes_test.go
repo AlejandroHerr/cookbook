@@ -20,7 +20,7 @@ func TestPgRecipesRepository(t *testing.T) {
 	t.Run("PgRecipesRepository", func(t *testing.T) {
 		t.Parallel()
 
-		repo := recipes.NewPgRecipesRepository(pgPool)
+		repo := recipes.MakePgRecipesRepository(pgPool)
 
 		t.Run("GetAll", func(t *testing.T) {
 			t.Run("When there are recipes it returns the recipes", func(t *testing.T) {
