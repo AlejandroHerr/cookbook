@@ -223,17 +223,17 @@ type RecipeWithoutIngredients struct {
 }
 
 type GetRecipesResponse struct {
-	Recipes []*RecipeWithoutIngredients `json:"recipes"`
+	Recipes []RecipeWithoutIngredients `json:"recipes" tstype:",required"`
 }
 
 func (res GetRecipesResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
-func MakeGetRecipesResponse(recipes []*Recipe) *GetRecipesResponse {
-	list := []*RecipeWithoutIngredients{}
+func MakeGetRecipesResponse(recipes []Recipe) *GetRecipesResponse {
+	list := []RecipeWithoutIngredients{}
 	for _, r := range recipes {
-		list = append(list, &RecipeWithoutIngredients{
+		list = append(list, RecipeWithoutIngredients{
 			ID:          r.ID,
 			Title:       r.Title,
 			Headline:    r.Headline,
@@ -251,17 +251,17 @@ func MakeGetRecipesResponse(recipes []*Recipe) *GetRecipesResponse {
 	return &GetRecipesResponse{Recipes: list}
 }
 
-type createUpdateRecipeRequest struct {
-	*CreateUpdateRecipeDTO
+type CreateUpdateRecipeRequest struct {
+	*CreateUpdateRecipeDTO `json:"inline" tstype:",extends,required"`
 }
 
-func makeCreateUpdateRecipeRequest() *createUpdateRecipeRequest {
-	return &createUpdateRecipeRequest{
+func makeCreateUpdateRecipeRequest() *CreateUpdateRecipeRequest {
+	return &CreateUpdateRecipeRequest{
 		CreateUpdateRecipeDTO: &CreateUpdateRecipeDTO{}, //nolint:exhaustruct
 	}
 }
 
-func (req createUpdateRecipeRequest) Bind(_ *http.Request) error {
+func (req CreateUpdateRecipeRequest) Bind(_ *http.Request) error {
 	if err := Validator().Struct(req); err != nil {
 		return err //nolint:wrapcheck
 	}
@@ -270,8 +270,8 @@ func (req createUpdateRecipeRequest) Bind(_ *http.Request) error {
 }
 
 type CreateRecipeResponse struct {
-	*Recipe
-	Slug string `json:"slug"`
+	*Recipe `tstype:",extends,required"`
+	Slug    string `json:"slug"`
 }
 
 func makeCreateRecipeResponse(recipe *Recipe) *CreateRecipeResponse {
@@ -288,8 +288,8 @@ func (res CreateRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) e
 }
 
 type GetRecipeResponse struct {
-	*Recipe
-	Slug string `json:"slug"`
+	*Recipe `tstype:",extends,required"`
+	Slug    string `json:"slug"`
 }
 
 func makeGetRecipeResponse(recipe *Recipe) *GetRecipeResponse {
@@ -304,8 +304,8 @@ func (res GetRecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) erro
 }
 
 type UpdateRecipeResponse struct {
-	*Recipe
-	Slug string `json:"slug"`
+	*Recipe `tstype:",extends,required"`
+	Slug    string `json:"slug"`
 }
 
 func makeUpdateUpdateRecipeResponse(recipe *Recipe) *UpdateRecipeResponse {

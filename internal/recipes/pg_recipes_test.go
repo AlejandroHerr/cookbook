@@ -24,12 +24,7 @@ func TestPgRecipesRepository(t *testing.T) {
 
 		t.Run("GetAll", func(t *testing.T) {
 			t.Run("When there are recipes it returns the recipes", func(t *testing.T) {
-				rs, err := repo.GetAll(context.Background())
-
-				got := make([]recipes.Recipe, len(rs))
-				for i, recipe := range rs {
-					got[i] = *recipe
-				}
+				got, err := repo.GetAll(context.Background())
 
 				expected := make([]recipes.Recipe, len(fixtures))
 

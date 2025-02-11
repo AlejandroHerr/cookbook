@@ -23,7 +23,7 @@ func MakePgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
 	}
 }
 
-func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]*Recipe, error) {
+func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 	query := `
     SELECT
       id, title, headline, description, steps, servings, url, tags, created_at, updated_at
@@ -37,10 +37,10 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]*Recipe, error) {
 	}
 	defer rows.Close()
 
-	recipes := make([]*Recipe, 0)
+	recipes := make([]Recipe, 0)
 
 	for rows.Next() {
-		recipe := new(Recipe)
+		recipe := Recipe{} //nolint: exhaustruct
 
 		if err := rows.Scan(
 			&recipe.ID,

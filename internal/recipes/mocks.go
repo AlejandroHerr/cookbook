@@ -15,9 +15,9 @@ type MockRecipesRepo struct {
 	mock.Mock
 }
 
-func (m *MockRecipesRepo) GetAll(ctx context.Context) ([]*Recipe, error) {
+func (m *MockRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 	args := m.Called(ctx)
-	return args.Get(0).([]*Recipe), args.Error(1)
+	return args.Get(0).([]Recipe), args.Error(1)
 }
 
 func (m *MockRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, error) {

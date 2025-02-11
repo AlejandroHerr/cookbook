@@ -44,32 +44,23 @@ func getOptionsHander(useCases *UseCases, entity string) http.HandlerFunc {
 			return
 		}
 
-		if err := render.RenderList(w, r, MakeSuggestionResponse(options)); err != nil {
+		if err := render.Render(w, r, &GetSuggestionsReponse{Options: options}); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}
 	}
 }
 
-type SuggestionReponse struct {
-	*Option
+type GetSuggestionsReponse struct {
+	Options []Option `json:"options" tstype:",required"`
 }
 
-func MakeSuggestionReponse(option *Option) *SuggestionReponse {
-	resp := &SuggestionReponse{Option: option}
+func MakeSuggestionReponse(options []Option) *GetSuggestionsReponse {
+	resp := &GetSuggestionsReponse{Options: options}
 
 	return resp
 }
 
-func (rd *SuggestionReponse) Render(_ http.ResponseWriter, _ *http.Request) error {
+func (rd *GetSuggestionsReponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
-}
-
-func MakeSuggestionResponse(options []Option) []render.Renderer {
-	list := []render.Renderer{}
-	for _, option := range options {
-		list = append(list, MakeSuggestionReponse(&option))
-	}
-
-	return list
 }

@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 
 	pgPool = testutil.MustConnect(ctx)
 	defer func() {
+		fmt.Println("Cleaning up fixtures")
 		recipes.MustCleanUpFixtures(ctx, pgPool)
 		pgPool.Close()
 	}()

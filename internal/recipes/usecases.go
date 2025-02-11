@@ -10,7 +10,7 @@ import (
 )
 
 type RecipesRepo interface {
-	GetAll(ctx context.Context) ([]*Recipe, error)
+	GetAll(ctx context.Context) ([]Recipe, error)
 	Create(ctx context.Context, recipe Recipe) (*Recipe, error)
 	GetByID(ctx context.Context, recipeID string) (*Recipe, error)
 	GetBySlug(ctx context.Context, recipeSlug string) (*Recipe, error)
@@ -43,7 +43,7 @@ func MakeUseCases(
 	}
 }
 
-func (u UseCases) GetAll(ctx context.Context) ([]*Recipe, error) {
+func (u UseCases) GetAll(ctx context.Context) ([]Recipe, error) {
 	recipes, err := u.recipesRepo.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting all recipes: %w", err)

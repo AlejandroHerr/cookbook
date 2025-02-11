@@ -29,7 +29,7 @@ func (r Recipe) Slug() string {
 }
 
 func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
-	title := faker.Adjective() + " " + faker.Dinner()
+	title := faker.Adjective() + " " + faker.Adjective() + " " + faker.Dinner()
 	description := faker.LoremIpsumParagraph(2, 3, 5, ".")
 	headline := faker.LoremIpsumParagraph(2, 3, 5, ".")
 	steps := faker.LoremIpsumParagraph(2, 3, 5, ".")

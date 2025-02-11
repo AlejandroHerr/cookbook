@@ -37,7 +37,7 @@ func completeRecipeHandler(useCases *UseCases) http.HandlerFunc {
 			return
 		}
 
-		if err := render.Render(w, r, &CompleteRecipeResponse{Recipe: recipe}); err != nil {
+		if err := render.Render(w, r, &CompleteRecipeResponse{Recipe: *recipe}); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}
@@ -57,9 +57,9 @@ func (req CompleteRecipeRequest) Bind(_ *http.Request) error {
 }
 
 type CompleteRecipeResponse struct {
-	Recipe *Recipe `json:"recipe"`
+	Recipe Recipe `json:"recipe" tstype:",required"`
 }
 
-func (res CompleteRecipeResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (res CompleteRecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }

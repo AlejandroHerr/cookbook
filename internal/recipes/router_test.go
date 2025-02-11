@@ -108,7 +108,7 @@ func TestRecipesRouter(t *testing.T) {
 						Ingredients: nil,
 					}
 
-					require.Equal(t, *dbRecipes[i], got, "should be the recipe "+strconv.Itoa(i)+" in the db")
+					require.Equal(t, dbRecipes[i], got, "should be the recipe "+strconv.Itoa(i)+" in the db")
 				}
 			})
 		})

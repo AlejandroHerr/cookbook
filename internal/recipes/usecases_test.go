@@ -42,7 +42,7 @@ func TestRecipesUseCases(t *testing.T) {
 		t.Parallel()
 		t.Run("returns the recipes from the repo", func(t *testing.T) {
 			services := newTestServices()
-			recipes := []*recipes.Recipe{{ID: uuid.New()}}
+			recipes := []recipes.Recipe{{ID: uuid.New()}}
 			services.mockRecipesRepo.On("GetAll", mock.Anything).Return(recipes, nil)
 
 			result, err := services.useCases.GetAll(context.Background())
@@ -57,7 +57,7 @@ func TestRecipesUseCases(t *testing.T) {
 		t.Run("when the recipes repo fails it returns an error", func(t *testing.T) {
 			services := newTestServices()
 			repoErr := errors.New("repo error")
-			services.mockRecipesRepo.On("GetAll", mock.Anything).Return([]*recipes.Recipe{}, repoErr)
+			services.mockRecipesRepo.On("GetAll", mock.Anything).Return([]recipes.Recipe{}, repoErr)
 
 			_, err := services.useCases.GetAll(context.Background())
 
