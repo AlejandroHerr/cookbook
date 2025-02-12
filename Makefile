@@ -4,6 +4,9 @@ live/rest-api:
 	set -a; source .env; set +a; \
 		cd ./rest-api/ && go run cmd/app/main.go 
 
+generate/types:
+	cd ./rest-api/ && tygo generate
+
 db/up:
 	source .env && docker compose --env-file .env -p cookbook up db -d
 db/migration/up:
