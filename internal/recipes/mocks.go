@@ -1,3 +1,4 @@
+//nolint:errcheck,wrapcheck
 package recipes
 
 import (

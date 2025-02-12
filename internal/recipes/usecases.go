@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type RecipesRepo interface {
+type RecipesRepo interface { //nolint:revive
 	GetAll(ctx context.Context) ([]Recipe, error)
 	Create(ctx context.Context, recipe Recipe) (*Recipe, error)
 	GetByID(ctx context.Context, recipeID string) (*Recipe, error)
@@ -70,7 +70,7 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 		return nil, fmt.Errorf("upsert ingredients: %w", err)
 	}
 
-	recipe := Recipe{
+	recipe := Recipe{ //nolint:exhaustruct
 		ID:          uuid.New(),
 		Title:       dto.Title,
 		Headline:    &dto.Headline,
@@ -133,7 +133,7 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		return nil, fmt.Errorf("upsert ingredients: %w", err)
 	}
 
-	recipe := Recipe{
+	recipe := Recipe{ //nolint:exhaustruct
 		ID:          id,
 		Title:       dto.Title,
 		Headline:    &dto.Headline,

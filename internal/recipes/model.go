@@ -43,12 +43,12 @@ func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
 
 	ingredients := make([]RecipeIngredient, 5)
 	for i := 0; i < len(ingredients); i++ {
-		ingredient, err := RecipeIngredient{}.Fake(faker)
+		ingredient, err := RecipeIngredient{}.Fake(faker) //nolint: exhaustruct
 		if err != nil {
 			return nil, err
 		}
 
-		ingredients[i] = ingredient.(RecipeIngredient)
+		ingredients[i] = ingredient.(RecipeIngredient) //nolint:errcheck
 	}
 
 	return Recipe{

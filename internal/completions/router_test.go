@@ -82,7 +82,7 @@ func TestRouter(t *testing.T) {
 
 			usecases := completions.MakeUseCases(cache, scrapper, aiService, logging.NewVoidLogger())
 
-			url := "http://example.com/recipe-1"
+			url := "http://example.com/recipe-3"
 
 			cache.On("Get", url).Return([]uint8{}, errors.New("not found"))
 			cache.On("Set", url, mock.Anything).Return(nil)

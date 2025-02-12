@@ -1,3 +1,4 @@
+//nolint:errcheck,wrapcheck
 package common
 
 import (
