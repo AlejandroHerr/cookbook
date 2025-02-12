@@ -64,7 +64,7 @@ func TestRouter(t *testing.T) {
 			err = json.NewDecoder(resp.Body).Decode(&fetched)
 			require.NoError(t, err, "should be a CompleteRecipeResponse")
 
-			require.Equal(t, expected, fetched.Recipe, "should return the recipe")
+			require.Equal(t, *expected, fetched.Recipe, "should return the recipe")
 
 			cache.AssertCalled(t, "Get", url)
 

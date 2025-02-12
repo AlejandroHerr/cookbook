@@ -1,8 +1,8 @@
 include .env
 
-live/server:
+live/rest-api:
 	set -a; source .env; set +a; \
-		go run cmd/app/main.go 
+		cd ./rest-api/ && go run cmd/app/main.go 
 
 db/up:
 	source .env && docker compose --env-file .env -p cookbook up db -d
@@ -15,6 +15,8 @@ db/down:
 db/migration/create:
 	docker run -v $(PWD)/migrations:/migrations migrate/migrate -path=/migrations/ -verbose create -ext sql -dir /migrations $(name)
 
+test/rest-api:
+	cd ./rest-api/ && gotestsum 
 test/db/up:
 	source .env.test && docker compose --env-file .env.test -p cookbook-test up db -d
 test/db/migration/up:

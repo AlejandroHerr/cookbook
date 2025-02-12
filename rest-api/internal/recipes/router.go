@@ -252,7 +252,7 @@ func MakeGetRecipesResponse(recipes []Recipe) *GetRecipesResponse {
 }
 
 type CreateUpdateRecipeRequest struct {
-	*CreateUpdateRecipeDTO `json:"inline" tstype:",extends,required"`
+	*CreateUpdateRecipeDTO `tstype:",extends,required"`
 }
 
 func makeCreateUpdateRecipeRequest() *CreateUpdateRecipeRequest {

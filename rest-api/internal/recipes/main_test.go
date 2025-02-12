@@ -18,7 +18,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	err := godotenv.Load("../../.env.test")
+	err := godotenv.Load("../../../.env.test")
 	if err != nil {
 		log.Fatalf("loading .env.test file: %v", err)
 	}
