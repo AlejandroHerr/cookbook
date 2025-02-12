@@ -2,10 +2,10 @@ include .env
 
 live/rest-api:
 	set -a; source .env; set +a; \
-		cd ./pkgs/rest-api/ && go run cmd/app/main.go 
+		go run cmd/app/main.go 
 
 generate/types:
-	cd ./pkgs/rest-api/ && tygo generate
+	tygo generate
 
 db/up:
 	source .env && docker compose --env-file .env -p cookbook up db -d
@@ -18,9 +18,12 @@ db/down:
 db/migration/create:
 	docker run -v $(PWD)/migrations:/migrations migrate/migrate -path=/migrations/ -verbose create -ext sql -dir /migrations $(name)
 
+lint/rest-api:
+	golangci-lint run
+
 test/rest-api:
 	set -a; source .env.test; set +a; \
-	cd ./pkgs/rest-api/ && gotestsum 
+		gotestsum 
 
 test/db/up:
 	source .env.test && docker compose --env-file .env.test -p cookbook-test up db -d

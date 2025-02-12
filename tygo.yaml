@@ -1,19 +1,28 @@
 packages:
-  - path: "github.com/AlejandroHerr/cookbook/internal/core/model"
+  - path: "github.com/AlejandroHerr/cookbook/internal/completions"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       null.String: "null | string"
       null.Bool: "null | boolean"
       uuid.UUID: "string /* uuid */"
       uuid.NullUUID: "null | string /* uuid */"
-    output_path: "./go-cookbok-react/src//types/internal/model"
-  - path: "github.com/AlejandroHerr/cookbook/internal/core/http/routers"
+    output_path: ./frontend/src/types/completions
+    include_files: ["model.go", "dtos.go", "router.go"]
+  - path: "github.com/AlejandroHerr/cookbook/internal/recipes"
     type_mappings:
       time.Time: "string /* RFC3339 */"
       null.String: "null | string"
       null.Bool: "null | boolean"
       uuid.UUID: "string /* uuid */"
       uuid.NullUUID: "null | string /* uuid */"
-    output_path: "./go-cookbok-react/src/types/routes"
-    frontmatter: |
-      import * as model from "../internal/model"
+    output_path: ./frontend/src/types/recipes
+    include_files: ["model.go", "dtos.go", "router.go"]
+  - path: "github.com/AlejandroHerr/cookbook/internal/suggestions"
+    type_mappings:
+      time.Time: "string /* RFC3339 */"
+      null.String: "null | string"
+      null.Bool: "null | boolean"
+      uuid.UUID: "string /* uuid */"
+      uuid.NullUUID: "null | string /* uuid */"
+    output_path: ./frontend/src/types/suggestions
+    include_files: ["model.go", "router.go"]
