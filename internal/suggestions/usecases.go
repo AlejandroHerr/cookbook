@@ -3,9 +3,6 @@ package suggestions
 import (
 	"context"
 	"fmt"
-	"sync"
-
-	"github.com/AlejandroHerr/cookbook/internal/recipes"
 )
 
 type Repo interface {
@@ -63,22 +60,4 @@ func (u UseCases) GetIngredientsOptions(ctx context.Context, search string) ([]O
 	}
 
 	return options, nil
-}
-
-var (
-	once        sync.Once
-	unitOptions = make([]Option, len(recipes.Units))
-)
-
-func (u UseCases) GetUnitsOptions(context.Context) ([]Option, error) {
-	once.Do(func() {
-		for i, u := range recipes.Units {
-			unitOptions[i] = Option{
-				Label: recipes.UnitDisplayNames[u],
-				Value: u.String(),
-			}
-		}
-	})
-
-	return unitOptions, nil
 }

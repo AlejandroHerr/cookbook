@@ -41,7 +41,8 @@ The title
 A 2-line heading of the recipe, highlighting the most important characteristics of the dish being prepared.
 A description of the recipe that is being prepared. It should be one paragraph long or longer. Don't describe the content but the dish being prepared.
 Serving count
-Ingredients with amounts and units (if the unit is units specify it)(if the amount is a fraction write it with decimals)
+Preparation time
+Ingredients with amounts and units (if the unit is units specify it)(if the amount is a fraction write it with decimals). DO NOT INCLUDE DUPLICATES.
 If you don't know the unit, do not invent and write uncountable.
 If the unit is not a unit of volume or mass, but is made of whole units, write countable.  
 Suggested tags that fit the recipe type or diet or origin (like 'low-carb,' 'snack,' or 'breakfast')
@@ -58,7 +59,7 @@ func (s OpenAIService) CompleteRecipe(ctx context.Context, content string) (*Rec
 	}
 
 	res, err := s.openAiClient.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{ //nolint:exhaustruct
-		Model: openai.GPT4o20240806,
+		Model: openai.GPT4o,
 		Messages: []openai.ChatCompletionMessage{
 			{ //nolint:exhaustruct
 				Role:    openai.ChatMessageRoleSystem,

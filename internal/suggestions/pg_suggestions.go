@@ -63,7 +63,7 @@ func (repo PgSuggestionsRepo) FindMatchingIngredients(ctx context.Context, searc
       FROM
         ingredients
       WHERE 
-        ingredients ILIKE '%' || $1 || '%'
+        name ILIKE '%' || $1 || '%'
       ORDER BY 
         score DESC
     )

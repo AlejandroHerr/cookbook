@@ -15,6 +15,7 @@ type CreateUpdateRecipeDTO struct {
 	Description string                      `json:"description" validate:"omitempty,min=1"`
 	Headline    string                      `json:"headline" validate:"omitempty,min=1"`
 	Steps       string                      `json:"steps" validate:"omitempty,min=1"`
+	PrepTime    uint                        `json:"prepTime" validate:"omitempty"`
 }
 
 type CreateRecipeIngredientDTO struct {
@@ -46,12 +47,13 @@ func (i CreateUpdateRecipeDTO) Fake(gofakeit *gofakeit.Faker) (any, error) {
 		URL:         gofakeit.URL(),
 		Headline:    gofakeit.Sentence(10),
 		Steps:       gofakeit.Sentence(10),
+		PrepTime:    gofakeit.UintRange(0, 100),
 	}, nil
 }
 
 func (i CreateRecipeIngredientDTO) Fake(gofakeit *gofakeit.Faker) (any, error) {
 	name := gofakeit.Adjective() + " " + gofakeit.Name()
-	unit := Units[gofakeit.IntRange(0, len(Units)-1)]
+	unit := Unit(Units[gofakeit.Number(0, len(Units)-1)])
 
 	return CreateRecipeIngredientDTO{
 		Name:     name,

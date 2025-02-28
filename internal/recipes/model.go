@@ -15,6 +15,7 @@ type Recipe struct {
 	Title       string             `json:"title"`
 	Headline    *string            `json:"headline"`
 	Description *string            `json:"description,omitempty"`
+	PrepTime    *uint              `json:"prepTime"`
 	Steps       *string            `json:"steps"`
 	Servings    *uint              `json:"servings"`
 	URL         *string            `json:"url,omitempty"`
@@ -32,6 +33,7 @@ func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
 	title := faker.Adjective() + " " + faker.Adjective() + " " + faker.Dinner()
 	description := faker.LoremIpsumParagraph(2, 3, 5, ".")
 	headline := faker.LoremIpsumParagraph(2, 3, 5, ".")
+	prepTime := faker.UintRange(1, 60)
 	steps := faker.LoremIpsumParagraph(2, 3, 5, ".")
 	url := faker.URL()
 	servings := faker.UintRange(1, 10)
@@ -59,6 +61,7 @@ func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
 		Tags:        tags,
 		Ingredients: ingredients,
 		Headline:    &headline,
+		PrepTime:    &prepTime,
 		Steps:       &steps,
 		Servings:    &servings,
 		CreatedAt:   time.Now(),
@@ -91,14 +94,6 @@ func (ri RecipeIngredient) Fake(faker *gofakeit.Faker) (any, error) {
 
 type Unit string
 
-func (u Unit) String() string {
-	return string(u)
-}
-
-func (u Unit) Fake(faker *gofakeit.Faker) (any, error) {
-	return faker.RandomString([]string{"g", "kg", "ml", "l", "tsp", "tbsp", "cup", "qt", "countable", "uncountable"}), nil
-}
-
 const (
 	Kilo        Unit = "kilo"
 	Gram        Unit = "g"
@@ -113,6 +108,28 @@ const (
 	Uncountable Unit = "uncountable"
 )
 
+func (u Unit) String() string {
+	return string(u)
+}
+
+var Units = []string{
+	Kilo.String(),
+	Gram.String(),
+	Milligram.String(),
+	Liter.String(),
+	Milliliter.String(),
+	Teaspoon.String(),
+	Tablespoon.String(),
+	Cup.String(),
+	Quart.String(),
+	Countable.String(),
+	Uncountable.String(),
+}
+
+func (u Unit) Fake(faker *gofakeit.Faker) (any, error) {
+	return faker.RandomString(Units), nil
+}
+
 func NewUnit(s string) (Unit, error) {
 	if !isUnit(s) {
 		return "", errors.New("not a valid unit")
@@ -120,34 +137,6 @@ func NewUnit(s string) (Unit, error) {
 
 	return Unit(s), nil
 }
-
-var (
-	Units = []Unit{
-		Kilo,
-		Gram,
-		Milligram,
-		Liter,
-		Milliliter,
-		Teaspoon,
-		Tablespoon,
-		Cup,
-		Quart,
-		Countable,
-		Uncountable,
-	}
-	UnitDisplayNames = map[Unit]string{
-		Kilo:        "kg",
-		Gram:        "g",
-		Milligram:   "mg",
-		Liter:       "L",
-		Teaspoon:    "tsp",
-		Tablespoon:  "tbsp",
-		Cup:         "cup",
-		Quart:       "qt",
-		Countable:   "unit(s)",
-		Uncountable: "some",
-	}
-)
 
 func UnitValidation(fl validator.FieldLevel) bool {
 	value := fl.Field().String()

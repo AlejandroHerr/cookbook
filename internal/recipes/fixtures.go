@@ -28,13 +28,13 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
 			ctx,
 			`
         INSERT INTO
-          recipes (id, title, headline, description, steps, servings, url, tags, slug)
+          recipes (id, title, headline, description, steps, prep_time, servings, url, tags, slug)
         VALUES
-          ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+          ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         RETURNING
           created_at, updated_at
       `,
-			recipe.ID, recipe.Title, recipe.Headline, recipe.Description, recipe.Steps, recipe.Servings, recipe.URL, recipe.Tags, recipe.Slug(),
+			recipe.ID, recipe.Title, recipe.Headline, recipe.Description, recipe.Steps, recipe.PrepTime, recipe.Servings, recipe.URL, recipe.Tags, recipe.Slug(),
 		)
 
 		if err := row.Scan(&recipe.CreatedAt, &recipe.UpdatedAt); err != nil {

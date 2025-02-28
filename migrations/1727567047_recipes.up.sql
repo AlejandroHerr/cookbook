@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   description TEXT,
   steps TEXT,
   servings INTEGER,
+  prep_time INTEGER,
   url VARCHAR (255),
   tags TEXT[],
   slug TEXT,

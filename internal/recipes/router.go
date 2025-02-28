@@ -68,7 +68,7 @@ func createRecipeHandler(useCases *UseCases) http.HandlerFunc {
 					Err:            err,
 					HTTPStatusCode: http.StatusConflict,
 					StatusText:     http.StatusText(http.StatusConflict),
-					ErrorText:      "duplicated key '" + duplicateErr.Key + "' found creating recipe.",
+					ErrorText:      err.Error(),
 				})
 
 				return
@@ -216,6 +216,7 @@ type RecipeWithoutIngredients struct {
 	UpdatedAt   time.Time `json:"updatedAt"`
 	Description *string   `json:"description,omitempty"`
 	Steps       *string   `json:"steps,omitempty"`
+	PrepTime    *uint     `json:"prepTime,omitempty"`
 	Servings    *uint     `json:"servings,omitempty"`
 	URL         *string   `json:"url,omitempty"`
 	Tags        []string  `json:"tags"`
@@ -241,6 +242,7 @@ func MakeGetRecipesResponse(recipes []Recipe) *GetRecipesResponse {
 			UpdatedAt:   r.UpdatedAt,
 			Description: r.Description,
 			Steps:       r.Steps,
+			PrepTime:    r.PrepTime,
 			Servings:    r.Servings,
 			URL:         r.URL,
 			Tags:        r.Tags,

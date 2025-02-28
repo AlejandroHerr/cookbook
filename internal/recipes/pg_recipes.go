@@ -26,7 +26,7 @@ func MakePgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
 func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 	query := `
     SELECT
-      id, title, headline, description, steps, servings, url, tags, created_at, updated_at
+      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
     FROM
       recipes
   `
@@ -48,6 +48,7 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 			&recipe.Headline,
 			&recipe.Description,
 			&recipe.Steps,
+			&recipe.PrepTime,
 			&recipe.Servings,
 			&recipe.URL,
 			&recipe.Tags,
@@ -77,7 +78,7 @@ func (repo PgRecipesRepo) GetBySlug(ctx context.Context, slug string) (*Recipe, 
 func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (*Recipe, error) {
 	query := `
     SELECT 
-      id, title, headline, description, steps, servings, url, tags, created_at, updated_at
+      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
     FROM
       recipes      
     WHERE ` + field + ` = $1
@@ -92,6 +93,7 @@ func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (
 		&recipe.Headline,
 		&recipe.Description,
 		&recipe.Steps,
+		&recipe.PrepTime,
 		&recipe.Servings,
 		&recipe.URL,
 		&recipe.Tags,
@@ -149,11 +151,11 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 
 	sql := `
     INSERT INTO
-      recipes (id, title, headline, description, steps, servings, url, tags, slug)
+      recipes (id, title, headline, description, steps, prep_time, servings, url, tags, slug)
     VALUES 
-      (@id, @title, @headline,@description, @steps,@servings,@url, @tags, @slug)
+      (@id, @title, @headline, @description, @steps, @prep_time, @servings, @url, @tags, @slug)
     RETURNING
-      id, title, headline, description, steps, servings, url, tags, created_at, updated_at
+      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
   `
 	values := pgx.NamedArgs{
 		"id":          recipe.ID,
@@ -161,6 +163,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 		"headline":    recipe.Headline,
 		"description": recipe.Description,
 		"steps":       recipe.Steps,
+		"prep_time":   recipe.PrepTime,
 		"servings":    recipe.Servings,
 		"url":         recipe.URL,
 		"tags":        recipe.Tags,
@@ -176,6 +179,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 		&createdRecipe.Headline,
 		&createdRecipe.Description,
 		&createdRecipe.Steps,
+		&createdRecipe.PrepTime,
 		&createdRecipe.Servings,
 		&createdRecipe.URL,
 		&createdRecipe.Tags,
@@ -206,6 +210,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
       headline = @headline,
       description = @description,
       steps = @steps,
+      prep_time = @prep_time,
       servings = @servings,
       url = @url,
       tags = @tags,
@@ -213,7 +218,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
     WHERE 
       id = @id
     RETURNING
-      id, title, headline, description, steps, servings, url, tags, created_at, updated_at
+      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
 
   `
 	values := pgx.NamedArgs{
@@ -222,6 +227,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		"headline":    recipe.Headline,
 		"description": recipe.Description,
 		"steps":       recipe.Steps,
+		"prep_time":   recipe.PrepTime,
 		"servings":    recipe.Servings,
 		"url":         recipe.URL,
 		"tags":        recipe.Tags,
@@ -238,6 +244,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		&updatedRecipe.Headline,
 		&updatedRecipe.Description,
 		&updatedRecipe.Steps,
+		&updatedRecipe.PrepTime,
 		&updatedRecipe.Servings,
 		&updatedRecipe.URL,
 		&updatedRecipe.Tags,
@@ -303,7 +310,7 @@ func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor 
 	for i := 0; i < batch.Len(); i++ {
 		_, err := batchResult.Exec()
 		if err != nil {
-			return err //nolint: wrapcheck
+			return fmt.Errorf("error executing batched query at index %d: %w", i, err)
 		}
 	}
 

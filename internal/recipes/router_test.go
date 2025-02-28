@@ -100,6 +100,7 @@ func TestRecipesRouter(t *testing.T) {
 						Headline:    fetched.Recipes[i].Headline,
 						Description: fetched.Recipes[i].Description,
 						Steps:       fetched.Recipes[i].Steps,
+						PrepTime:    fetched.Recipes[i].PrepTime,
 						Servings:    fetched.Recipes[i].Servings,
 						URL:         fetched.Recipes[i].URL,
 						Tags:        fetched.Recipes[i].Tags,
@@ -141,6 +142,7 @@ func TestRecipesRouter(t *testing.T) {
 				require.Equal(t, recipeDTO.Headline, *fetched.Headline, "headline should be equal")
 				require.Equal(t, recipeDTO.Description, *fetched.Description, "description should be equal")
 				require.Equal(t, recipeDTO.Steps, *fetched.Steps, "steps should be equal")
+				require.Equal(t, recipeDTO.PrepTime, *fetched.PrepTime, "prepTime should be equal")
 				require.Equal(t, recipeDTO.Servings, *fetched.Servings, "servings should be equal")
 				require.Equal(t, recipeDTO.URL, *fetched.URL, "url should be equal")
 				require.Equal(t, recipeDTO.Tags, fetched.Tags, "tags should be equal")
@@ -323,6 +325,7 @@ func TestRecipesRouter(t *testing.T) {
 				require.Equal(t, recipeDTO.Headline, *fetched.Headline, "headline should be equal")
 				require.Equal(t, recipeDTO.Description, *fetched.Description, "description should be equal")
 				require.Equal(t, recipeDTO.Steps, *fetched.Steps, "steps should be equal")
+				require.Equal(t, recipeDTO.PrepTime, *fetched.PrepTime, "prepTime should be equal")
 				require.Equal(t, recipeDTO.Servings, *fetched.Servings, "servings should be equal")
 				require.Equal(t, recipeDTO.URL, *fetched.URL, "url should be equal")
 				require.Equal(t, recipeDTO.Tags, fetched.Tags, "tags should be equal")

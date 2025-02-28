@@ -25,6 +25,7 @@ func TestPgRecipesRepository(t *testing.T) {
 		t.Run("GetAll", func(t *testing.T) {
 			t.Run("When there are recipes it returns the recipes", func(t *testing.T) {
 				got, err := repo.GetAll(context.Background())
+				require.NoError(t, err, "error should be nil")
 
 				expected := make([]recipes.Recipe, len(fixtures))
 
@@ -33,9 +34,8 @@ func TestPgRecipesRepository(t *testing.T) {
 					expected[i].Ingredients = nil
 				}
 
-				require.NoError(t, err, "error should be nil")
 				require.Equal(t, len(got), len(expected), "should return the same number of recipes")
-				require.Equal(t, got, expected, "recipes should be equal")
+				RequireRecipesEqual(t, got, expected, "recipes should be equal")
 			})
 		})
 
@@ -133,7 +133,7 @@ func TestPgRecipesRepository(t *testing.T) {
 						Name:     i.Name,
 						Kind:     i.Kind,
 						Quantity: gofakeit.Float64Range(0.1, 200),
-						Unit:     recipes.Units[gofakeit.Number(0, len(recipes.Units)-1)],
+						Unit:     recipes.Unit(recipes.Units[gofakeit.Number(0, len(recipes.Units)-1)]),
 					}
 				}
 
@@ -201,6 +201,19 @@ func RequireRecipeEqual(t *testing.T, expected, got recipes.Recipe, msgAndArgs .
 	})
 	slices.SortFunc(got.Ingredients, func(l, r recipes.RecipeIngredient) int {
 		return strings.Compare(l.Name, r.Name)
+	})
+
+	require.Equal(t, expected, got, msgAndArgs...)
+}
+
+func RequireRecipesEqual(t *testing.T, expected, got []recipes.Recipe, msgAndArgs ...interface{}) {
+	t.Helper()
+
+	slices.SortFunc(expected, func(l, r recipes.Recipe) int {
+		return strings.Compare(l.Title, r.Title)
+	})
+	slices.SortFunc(got, func(l, r recipes.Recipe) int {
+		return strings.Compare(l.Title, r.Title)
 	})
 
 	require.Equal(t, expected, got, msgAndArgs...)

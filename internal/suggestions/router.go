@@ -13,7 +13,6 @@ func MakeRouter(useCases *UseCases) chi.Router {
 
 	r.Get("/ingredients", getOptionsHander(useCases, "ingredients"))
 	r.Get("/tags", getOptionsHander(useCases, "tags"))
-	r.Get("/units", getOptionsHander(useCases, "units"))
 
 	return r
 }
@@ -31,8 +30,6 @@ func getOptionsHander(useCases *UseCases, entity string) http.HandlerFunc {
 			options, err = useCases.GetIngredientsOptions(r.Context(), search)
 		case "tags":
 			options, err = useCases.GetTagsOptions(r.Context(), search)
-		case "units":
-			options, err = useCases.GetUnitsOptions(r.Context())
 		default:
 			render.Render(w, r, api.ErrNotFound(entity+" options")) //nolint: errcheck
 
