@@ -10,7 +10,7 @@ export const tagsCompletionsQueryOptions = ({
   queryKey: ['tags', search],
   queryFn: async () => {
     const res = await axios.get<GetSuggestionsReponse>(
-      `http://localhost:8080/tags?search=${search}`,
+      `http://localhost:8080/suggestions/tags?search=${search}`,
     );
 
     return res.data.options;
