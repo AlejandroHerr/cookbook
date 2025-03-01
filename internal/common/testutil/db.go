@@ -22,20 +22,20 @@ const (
 // DefaultTestDBConfig returns default test database configuration
 // which can be overridden by environment variables
 func DefaultTestDBConfig() (*db.Config, error) {
-	user := getEnv("DB_USER", defaultTestDBUser)
-	password := getEnv("DB_PASSWORD", defaultTestDBPassword)
+	user := getEnv("POSTGRES_USER", defaultTestDBUser)
+	password := getEnv("POSTGRES_PASSWORD", defaultTestDBPassword)
 	// string to int
-	port, err := strconv.Atoi(getEnv("DB_PORT", defaultTestDBPort))
+	port, err := strconv.Atoi(getEnv("POSTGRES_PORT", defaultTestDBPort))
 	if err != nil {
 		return nil, fmt.Errorf("parsing port: %w", err)
 	}
 
 	return &db.Config{
-		Host:     getEnv("DB_HOST", defaultTestDBHost),
+		Host:     getEnv("POSTGRES_HOST", defaultTestDBHost),
 		Port:     port,
 		User:     &user,
 		Password: &password,
-		Database: getEnv("DB_DATABASE", defaultTestDBName),
+		Database: getEnv("POSTGRES_DB", defaultTestDBName),
 	}, nil
 }
 

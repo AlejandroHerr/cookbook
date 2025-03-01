@@ -11,11 +11,11 @@ import (
 )
 
 type Config struct {
-	Password *string `env:"DB_PASS" json:"-"`
-	User     *string `env:"DB_USER" json:"user,omitempty"`
-	Port     int     `env:"DB_PORT,notEmpty,required" json:"port"`
-	Host     string  `env:"DB_HOST,notEmpty,required" json:"host"`
-	Database string  `env:"DB_DATABASE,notEmpty,required" json:"database"`
+	Password *string `env:"POSTGRES_PASS" json:"-"`
+	User     *string `env:"POSTGRES_USER" json:"user,omitempty"`
+	Port     int     `env:"POSTGRES_PORT,notEmpty,required" json:"port"`
+	Host     string  `env:"POSTGRES_HOST,notEmpty,required" json:"host"`
+	Database string  `env:"POSTGRES_DB,notEmpty,required" json:"database"`
 }
 
 func Connect(
