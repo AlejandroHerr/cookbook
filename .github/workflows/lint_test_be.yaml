@@ -1,10 +1,6 @@
-name: Go Test with PostgreSQL
+name: Lint and Test Backend
 
-on:
-  push:
-    branches: ["**"] # Run on all branches
-  pull_request:
-    branches: ["**"] # Run on PRs to any branch
+on: push
 
 jobs:
   lint:
