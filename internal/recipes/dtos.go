@@ -19,7 +19,7 @@ type CreateUpdateRecipeDTO struct {
 }
 
 type CreateRecipeIngredientDTO struct {
-	Quantity float64 `json:"quantity" validate:"required"`
+	Quantity float64 `json:"quantity"`
 	Unit     Unit    `json:"unit" validate:"required,is-unit"`
 	Name     string  `json:"name" validate:"required"`
 }
