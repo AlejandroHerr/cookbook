@@ -13,14 +13,14 @@ import (
 type Recipe struct {
 	ID          uuid.UUID          `json:"id"`
 	Title       string             `json:"title"`
-	Headline    *string            `json:"headline"`
+	Headline    *string            `json:"headline,omitempty"`
 	Description *string            `json:"description,omitempty"`
-	PrepTime    *uint              `json:"prepTime"`
-	Steps       *string            `json:"steps"`
-	Servings    *uint              `json:"servings"`
+	PrepTime    *uint              `json:"prepTime,omitempty"`
+	Steps       *string            `json:"steps,omitempty"`
+	Servings    uint               `json:"servings"`
 	URL         *string            `json:"url,omitempty"`
-	Tags        []string           `json:"tags"`
-	Ingredients []RecipeIngredient `json:"ingredients"`
+	Tags        []string           `json:"tags,omitempty"`
+	Ingredients []RecipeIngredient `json:"ingredients,omitempty"`
 	CreatedAt   time.Time          `json:"createdAt"`
 	UpdatedAt   time.Time          `json:"updatedAt"`
 }
@@ -63,7 +63,7 @@ func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
 		Headline:    &headline,
 		PrepTime:    &prepTime,
 		Steps:       &steps,
-		Servings:    &servings,
+		Servings:    servings,
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}, nil

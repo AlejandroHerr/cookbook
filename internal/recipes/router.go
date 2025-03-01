@@ -208,6 +208,10 @@ func Validator() *validator.Validate {
 	return validate
 }
 
+type RecipeResponse struct {
+	*Recipe
+}
+
 type RecipeWithoutIngredients struct {
 	ID          uuid.UUID `json:"id"`
 	Title       string    `json:"title"`
@@ -217,7 +221,7 @@ type RecipeWithoutIngredients struct {
 	Description *string   `json:"description,omitempty"`
 	Steps       *string   `json:"steps,omitempty"`
 	PrepTime    *uint     `json:"prepTime,omitempty"`
-	Servings    *uint     `json:"servings,omitempty"`
+	Servings    uint      `json:"servings"`
 	URL         *string   `json:"url,omitempty"`
 	Tags        []string  `json:"tags"`
 	Slug        string    `json:"slug"`

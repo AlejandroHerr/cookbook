@@ -70,6 +70,11 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 		return nil, fmt.Errorf("upsert ingredients: %w", err)
 	}
 
+	servings := uint(1)
+	if dto.Servings != 0 {
+		servings = dto.Servings
+	}
+
 	recipe := Recipe{ //nolint:exhaustruct
 		ID:          uuid.New(),
 		Title:       dto.Title,
@@ -77,7 +82,7 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 		Description: &dto.Description,
 		Steps:       &dto.Steps,
 		PrepTime:    &dto.PrepTime,
-		Servings:    &dto.Servings,
+		Servings:    servings,
 		URL:         &dto.URL,
 		Tags:        dto.Tags,
 		Ingredients: recipeIngredients,
@@ -134,6 +139,11 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		return nil, fmt.Errorf("upsert ingredients: %w", err)
 	}
 
+	servings := uint(1)
+	if dto.Servings != 0 {
+		servings = dto.Servings
+	}
+
 	recipe := Recipe{ //nolint:exhaustruct
 		ID:          id,
 		Title:       dto.Title,
@@ -141,7 +151,7 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		Description: &dto.Description,
 		Steps:       &dto.Steps,
 		PrepTime:    &dto.PrepTime,
-		Servings:    &dto.Servings,
+		Servings:    servings,
 		URL:         &dto.URL,
 		Tags:        dto.Tags,
 		Ingredients: recipeIngredients,

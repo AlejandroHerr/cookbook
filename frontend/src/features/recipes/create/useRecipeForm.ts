@@ -24,7 +24,7 @@ const formSchema = z.object({
     .min(3, 'Steps must be at least 3 characters long')
     .optional(),
   prepTime: z.number({ coerce: true }).optional(),
-  servings: z.number({ coerce: true }).optional(),
+  servings: z.number({ coerce: true }).min(1, 'Servings must be at least 1'),
   url: z.string().url('Invalid URL').optional(),
   tags: z
     .array(

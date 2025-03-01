@@ -90,7 +90,7 @@ function RouteComponent() {
                 {data.ingredients.map((ingredient) => (
                   <li
                     key={ingredient.id}
-                    className="text-sm font-medium leading-none"
+                    className="text-sm font-medium leading-5"
                   >
                     {ingredient.unit === Unit.Uncountable
                       ? 'some '
