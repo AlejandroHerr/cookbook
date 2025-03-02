@@ -13,6 +13,7 @@ import (
 type Recipe struct {
 	ID          uuid.UUID          `json:"id"`
 	Title       string             `json:"title"`
+	Slug        string             `json:"slug"`
 	Headline    *string            `json:"headline,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	PrepTime    *uint              `json:"prepTime,omitempty"`
@@ -23,10 +24,6 @@ type Recipe struct {
 	Ingredients []RecipeIngredient `json:"ingredients,omitempty"`
 	CreatedAt   time.Time          `json:"createdAt"`
 	UpdatedAt   time.Time          `json:"updatedAt"`
-}
-
-func (r Recipe) Slug() string {
-	return slug.Make(r.Title)
 }
 
 func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
@@ -56,6 +53,7 @@ func (r Recipe) Fake(faker *gofakeit.Faker) (any, error) {
 	return Recipe{
 		ID:          uuid.New(),
 		Title:       title,
+		Slug:        slug.Make(title),
 		Description: &description,
 		URL:         &url,
 		Tags:        tags,

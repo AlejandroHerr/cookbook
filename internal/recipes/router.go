@@ -5,14 +5,12 @@ import (
 	"errors"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/AlejandroHerr/cookbook/internal/common"
 	"github.com/AlejandroHerr/cookbook/internal/common/api"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 )
 
 func MakeRouter(useCases *UseCases) chi.Router {
@@ -145,7 +143,7 @@ func updateRecipeHandler(useCases *UseCases) http.HandlerFunc {
 			return
 		}
 
-		recipe, err := useCases.Update(r.Context(), recipe.ID, request.CreateUpdateRecipeDTO)
+		recipe, err := useCases.Update(r.Context(), recipe, request.CreateUpdateRecipeDTO)
 		if err != nil {
 			var duplicateErr *common.ErrDuplicateKey
 
@@ -212,21 +210,6 @@ type RecipeResponse struct {
 	*Recipe
 }
 
-type RecipeWithoutIngredients struct {
-	ID          uuid.UUID `json:"id"`
-	Title       string    `json:"title"`
-	Headline    *string   `json:"headline"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
-	Description *string   `json:"description,omitempty"`
-	Steps       *string   `json:"steps,omitempty"`
-	PrepTime    *uint     `json:"prepTime,omitempty"`
-	Servings    uint      `json:"servings"`
-	URL         *string   `json:"url,omitempty"`
-	Tags        []string  `json:"tags"`
-	Slug        string    `json:"slug"`
-}
-
 type GetRecipesResponse struct {
 	Recipes []GetRecipeResponse `json:"recipes" tstype:",required"`
 }
@@ -240,7 +223,6 @@ func MakeGetRecipesResponse(recipes []Recipe) *GetRecipesResponse {
 	for _, r := range recipes {
 		list = append(list, GetRecipeResponse{
 			Recipe: &r,
-			Slug:   r.Slug(),
 		})
 	}
 
@@ -267,13 +249,11 @@ func (req CreateUpdateRecipeRequest) Bind(_ *http.Request) error {
 
 type CreateRecipeResponse struct {
 	*Recipe `tstype:",extends,required"`
-	Slug    string `json:"slug"`
 }
 
 func makeCreateRecipeResponse(recipe *Recipe) *CreateRecipeResponse {
 	return &CreateRecipeResponse{
 		Recipe: recipe,
-		Slug:   recipe.Slug(),
 	}
 }
 
@@ -285,13 +265,11 @@ func (res CreateRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) e
 
 type GetRecipeResponse struct {
 	*Recipe `tstype:",extends,required"`
-	Slug    string `json:"slug"`
 }
 
 func makeGetRecipeResponse(recipe *Recipe) *GetRecipeResponse {
 	return &GetRecipeResponse{
 		Recipe: recipe,
-		Slug:   recipe.Slug(),
 	}
 }
 
@@ -301,13 +279,11 @@ func (res GetRecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) erro
 
 type UpdateRecipeResponse struct {
 	*Recipe `tstype:",extends,required"`
-	Slug    string `json:"slug"`
 }
 
 func makeUpdateUpdateRecipeResponse(recipe *Recipe) *UpdateRecipeResponse {
 	return &UpdateRecipeResponse{
 		Recipe: recipe,
-		Slug:   recipe.Slug(),
 	}
 }
 

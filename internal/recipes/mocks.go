@@ -46,6 +46,11 @@ func (m *MockRecipesRepo) Delete(ctx context.Context, recipeID string) error {
 	return args.Error(0)
 }
 
+func (m *MockRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (string, error) {
+	args := m.Called(ctx, title)
+	return args.String(0), args.Error(1)
+}
+
 type MockIngredientsRepo struct {
 	mock.Mock
 }

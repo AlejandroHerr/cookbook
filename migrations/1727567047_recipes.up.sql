@@ -37,7 +37,6 @@ CREATE TABLE IF NOT EXISTS recipes (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-ALTER TABLE recipes ADD CONSTRAINT unique_title UNIQUE (title);
 ALTER TABLE recipes ADD CONSTRAINT unique_slug UNIQUE (slug);
 CREATE INDEX idx_recipes_slug ON recipes(slug);
 

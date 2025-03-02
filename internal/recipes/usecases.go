@@ -17,6 +17,7 @@ type RecipesRepo interface { //nolint:revive
 	GetBySlug(ctx context.Context, recipeSlug string) (*Recipe, error)
 	Update(ctx context.Context, recipe Recipe) (*Recipe, error)
 	Delete(ctx context.Context, recipeID string) error
+	GetUniqueSlug(ctx context.Context, title string) (string, error)
 }
 
 type IngredientsRepo interface {
@@ -76,9 +77,15 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 		servings = dto.Servings
 	}
 
-	recipe := Recipe{ //nolint:exhaustruct
+	slug, err := u.recipesRepo.GetUniqueSlug(ctxWithTransaction, dto.Title)
+	if err != nil {
+		return nil, fmt.Errorf("get unique slug: %w", err)
+	}
+
+	recipe := Recipe{
 		ID:          uuid.New(),
 		Title:       dto.Title,
+		Slug:        slug,
 		Headline:    &dto.Headline,
 		Description: &dto.Description,
 		Steps:       &dto.Steps,
@@ -87,6 +94,8 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 		URL:         &dto.URL,
 		Tags:        dto.Tags,
 		Ingredients: recipeIngredients,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	created, err := u.recipesRepo.Create(ctxWithTransaction, recipe)
@@ -122,7 +131,7 @@ func (u UseCases) Get(ctx context.Context, recipeIDOrSlug string) (*Recipe, erro
 	return recipe, nil
 }
 
-func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRecipeDTO) (*Recipe, error) {
+func (u UseCases) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateRecipeDTO) (*Recipe, error) {
 	transaction, err := u.transactionManager.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("transaction manager begin: %w", err)
@@ -145,9 +154,18 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		servings = dto.Servings
 	}
 
-	recipe := Recipe{
-		ID:          id,
+	slug := recipe.Slug
+	if dto.Title != recipe.Title {
+		slug, err = u.recipesRepo.GetUniqueSlug(ctxWithTransaction, dto.Title)
+		if err != nil {
+			return nil, fmt.Errorf("get unique slug: %w", err)
+		}
+	}
+
+	updatedRecipe := Recipe{
+		ID:          recipe.ID,
 		Title:       dto.Title,
+		Slug:        slug,
 		Headline:    &dto.Headline,
 		Description: &dto.Description,
 		Steps:       &dto.Steps,
@@ -156,11 +174,11 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		URL:         &dto.URL,
 		Tags:        dto.Tags,
 		Ingredients: recipeIngredients,
-		CreatedAt:   time.Now(),
+		CreatedAt:   recipe.CreatedAt,
 		UpdatedAt:   time.Now(),
 	}
 
-	updated, err := u.recipesRepo.Update(ctxWithTransaction, recipe)
+	updated, err := u.recipesRepo.Update(ctxWithTransaction, updatedRecipe)
 	if err != nil {
 		return nil, fmt.Errorf("recipes update: %w", err)
 	}

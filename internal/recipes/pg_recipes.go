@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/google/uuid"
+	"github.com/gosimple/slug"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,7 +27,7 @@ func MakePgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
 func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 	query := `
     SELECT
-      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
+      id, title, slug, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
     FROM
       recipes
   `
@@ -45,6 +46,7 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 		if err := rows.Scan(
 			&recipe.ID,
 			&recipe.Title,
+			&recipe.Slug,
 			&recipe.Headline,
 			&recipe.Description,
 			&recipe.Steps,
@@ -78,7 +80,7 @@ func (repo PgRecipesRepo) GetBySlug(ctx context.Context, slug string) (*Recipe, 
 func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (*Recipe, error) {
 	query := `
     SELECT 
-      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
+      id, title, slug, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
     FROM
       recipes      
     WHERE ` + field + ` = $1
@@ -90,6 +92,7 @@ func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (
 	if err := row.Scan(
 		&recipe.ID,
 		&recipe.Title,
+		&recipe.Slug,
 		&recipe.Headline,
 		&recipe.Description,
 		&recipe.Steps,
@@ -151,15 +154,16 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 
 	sql := `
     INSERT INTO
-      recipes (id, title, headline, description, steps, prep_time, servings, url, tags, slug)
+      recipes (id, title, slug, headline, description, steps, prep_time, servings, url, tags)
     VALUES 
-      (@id, @title, @headline, @description, @steps, @prep_time, @servings, @url, @tags, @slug)
+      (@id, @title, @slug, @headline, @description, @steps, @prep_time, @servings, @url, @tags)
     RETURNING
-      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
+      id, title, slug, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
   `
 	values := pgx.NamedArgs{
 		"id":          recipe.ID,
 		"title":       recipe.Title,
+		"slug":        recipe.Slug,
 		"headline":    recipe.Headline,
 		"description": recipe.Description,
 		"steps":       recipe.Steps,
@@ -167,7 +171,6 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 		"servings":    recipe.Servings,
 		"url":         recipe.URL,
 		"tags":        recipe.Tags,
-		"slug":        recipe.Slug(),
 	}
 
 	row := executor.QueryRow(ctx, sql, values)
@@ -176,6 +179,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 	if err := row.Scan(
 		&createdRecipe.ID,
 		&createdRecipe.Title,
+		&createdRecipe.Slug,
 		&createdRecipe.Headline,
 		&createdRecipe.Description,
 		&createdRecipe.Steps,
@@ -207,18 +211,18 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
       recipes 
     SET
       title = @title,
+      slug = @slug,
       headline = @headline,
       description = @description,
       steps = @steps,
       prep_time = @prep_time,
       servings = @servings,
       url = @url,
-      tags = @tags,
-      slug = @slug
+      tags = @tags
     WHERE 
       id = @id
     RETURNING
-      id, title, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
+      id, title, slug, headline, description, steps, prep_time, servings, url, tags, created_at, updated_at
 
   `
 	values := pgx.NamedArgs{
@@ -231,7 +235,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		"servings":    recipe.Servings,
 		"url":         recipe.URL,
 		"tags":        recipe.Tags,
-		"slug":        recipe.Slug(),
+		"slug":        recipe.Slug,
 	}
 
 	row := executor.QueryRow(ctx, sql, values)
@@ -241,6 +245,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 	if err := row.Scan(
 		&updatedRecipe.ID,
 		&updatedRecipe.Title,
+		&updatedRecipe.Slug,
 		&updatedRecipe.Headline,
 		&updatedRecipe.Description,
 		&updatedRecipe.Steps,
@@ -315,4 +320,45 @@ func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor 
 	}
 
 	return nil
+}
+
+func (repo PgRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (string, error) {
+	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
+
+	slug := slug.Make(title)
+
+	query := `
+    SELECT slug FROM recipes 
+    WHERE slug = $1 
+      OR slug ~ ($1 || '-[0-9]+$');
+  `
+
+	rows, err := executor.Query(ctx, query, slug)
+	if err != nil {
+		return "", fmt.Errorf("querying existing slugs: %w", err)
+	}
+
+	existingSlugs := make(map[string]bool)
+
+	for rows.Next() {
+		var existingSlug string
+		if err := rows.Scan(&existingSlug); err != nil {
+			return "", fmt.Errorf("scanning existing slug: %w", err)
+		}
+
+		existingSlugs[existingSlug] = true
+	}
+
+	if !existingSlugs[slug] {
+		return slug, nil
+	}
+
+	for i := 1; i < 1000; i++ {
+		newSlug := fmt.Sprintf("%s-%d", slug, i)
+		if !existingSlugs[newSlug] {
+			return newSlug, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find a unique slug for %s", title)
 }

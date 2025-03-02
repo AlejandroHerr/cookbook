@@ -137,6 +137,7 @@ func TestRecipesRouter(t *testing.T) {
 					Servings:    recipeDTO.Servings,
 					URL:         &recipeDTO.URL,
 					Tags:        recipeDTO.Tags,
+					Slug:        slug.Make(recipeDTO.Title),
 				}
 				RequireRecipeEqual(t, expectedRecipe, *fetched.Recipe, RecipeEqualityOptions{
 					IgnoreID:          true,
@@ -190,36 +191,12 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.ErrorAs(t, err, &errNotFound, "should not create a recipe")
 			})
-			t.Run("return a Conflict Status if recipe title already exists", func(t *testing.T) {
-				var recipeDTO recipes.CreateUpdateRecipeDTO
-
-				testutil.MustMakeStructFixture(&recipeDTO)
-
-				recipeDTO.Title = fixtures[0].Title
-
-				jsonBody, err := json.Marshal(recipeDTO)
-				require.NoError(t, err, "error marshaling recipeDTO")
-
-				resp, err := http.Post(
-					ts.server.URL+"/recipes/",
-					"application/json",
-					bytes.NewBuffer(jsonBody),
-				)
-				require.NoError(t, err, "request should not fail")
-				defer resp.Body.Close()
-
-				require.Equal(t, http.StatusConflict, resp.StatusCode, "should return a Conflict Status")
-
-				var fetched api.ErrResponse
-				err = json.NewDecoder(resp.Body).Decode(&fetched)
-				require.NoError(t, err, "response should be an ErrResponse")
-			})
 		})
 		t.Run("GET /{slug}", func(t *testing.T) {
 			t.Run("returns a recipe by the slug", func(t *testing.T) {
 				recipeToFind := fixtures[0]
 				resp, err := http.Get(
-					ts.server.URL + "/recipes/" + recipeToFind.Slug(),
+					ts.server.URL + "/recipes/" + recipeToFind.Slug,
 				)
 				require.NoError(t, err, "request should not fail")
 
@@ -231,7 +208,7 @@ func TestRecipesRouter(t *testing.T) {
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be a GetRecipeResponse")
 
-				dbRecipe, err := ts.recipesRepo.GetBySlug(context.Background(), recipeToFind.Slug())
+				dbRecipe, err := ts.recipesRepo.GetBySlug(context.Background(), recipeToFind.Slug)
 				require.NoError(t, err, "should not return an error")
 
 				require.Equal(t, *dbRecipe, *fetched.Recipe, "should be the recipe in the db")
@@ -320,6 +297,7 @@ func TestRecipesRouter(t *testing.T) {
 				expectedRecipe := recipes.Recipe{ //nolint:exhaustruct
 					ID:          recipeToUpdate.ID,
 					Title:       recipeDTO.Title,
+					Slug:        slug.Make(recipeDTO.Title),
 					Headline:    &recipeDTO.Headline,
 					Description: &recipeDTO.Description,
 					Steps:       &recipeDTO.Steps,
@@ -381,33 +359,6 @@ func TestRecipesRouter(t *testing.T) {
 				var errNotFound *common.ErrNotFound
 
 				require.ErrorAs(t, err, &errNotFound, "should not create a recipe")
-			})
-			t.Run("return a Conflict Status if recipe title already exists", func(t *testing.T) {
-				recipeToUpdate := fixtures[10]
-
-				var recipeDTO recipes.CreateUpdateRecipeDTO
-
-				testutil.MustMakeStructFixture(&recipeDTO)
-
-				recipeDTO.Title = fixtures[0].Title
-
-				jsonBody, err := json.Marshal(recipeDTO)
-				require.NoError(t, err, "error marshaling recipeDTO")
-
-				req, err := http.NewRequest(http.MethodPut, ts.server.URL+"/recipes/"+recipeToUpdate.ID.String(), bytes.NewBuffer(jsonBody))
-				require.NoError(t, err, "error creating request")
-
-				req.Header.Set("Content-Type", "application/json")
-
-				resp, err := http.DefaultClient.Do(req)
-				require.NoError(t, err, "request should not fail")
-				defer resp.Body.Close()
-
-				require.Equal(t, http.StatusConflict, resp.StatusCode, "should return a Conflict Status")
-
-				var fetched api.ErrResponse
-				err = json.NewDecoder(resp.Body).Decode(&fetched)
-				require.NoError(t, err, "response should be an ErrResponse")
 			})
 		})
 		t.Run("DELETE /{id}", func(t *testing.T) {

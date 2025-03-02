@@ -34,7 +34,7 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
         RETURNING
           created_at, updated_at
       `,
-			recipe.ID, recipe.Title, recipe.Headline, recipe.Description, recipe.Steps, recipe.PrepTime, recipe.Servings, recipe.URL, recipe.Tags, recipe.Slug(),
+			recipe.ID, recipe.Title, recipe.Headline, recipe.Description, recipe.Steps, recipe.PrepTime, recipe.Servings, recipe.URL, recipe.Tags, recipe.Slug,
 		)
 
 		if err := row.Scan(&recipe.CreatedAt, &recipe.UpdatedAt); err != nil {
