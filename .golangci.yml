@@ -33,10 +33,6 @@ linters-settings:
     # Minimal code complexity to report.
     min-complexity: 15
 
-  maligned:
-    # Print struct with more effective memory layout.
-    suggest-new: true
-
   # depguard:
   #   rules:
   #     main:
