@@ -146,7 +146,7 @@ func UnitValidation(fl validator.FieldLevel) bool {
 
 func isUnit(s string) bool {
 	for _, u := range Units {
-		if s == string(u) {
+		if s == u {
 			return true
 		}
 	}
