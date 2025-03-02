@@ -3,8 +3,6 @@ package recipes_test
 
 import (
 	"context"
-	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -44,7 +42,7 @@ func TestPgRecipesRepository(t *testing.T) {
 				recipe, err := repo.GetByID(context.Background(), fixtures[0].ID.String())
 
 				require.NoError(t, err, "error should be nil")
-				RequireRecipeEqual(t, *fixtures[0], *recipe, "recipe should be equal")
+				RequireRecipeEqual(t, *fixtures[0], *recipe, RecipeEqualityOptions{}, "recipe should be equal")
 			})
 			t.Run("When recipe does not exists it returns an error", func(t *testing.T) {
 				_, err := repo.GetByID(context.Background(), uuid.NewString())
@@ -59,7 +57,7 @@ func TestPgRecipesRepository(t *testing.T) {
 				recipe, err := repo.GetBySlug(context.Background(), fixtures[0].Slug())
 
 				require.NoError(t, err, "error should be nil")
-				RequireRecipeEqual(t, *fixtures[0], *recipe, "recipe should be equal")
+				RequireRecipeEqual(t, *fixtures[0], *recipe, RecipeEqualityOptions{}, "recipe should be equal")
 			})
 			t.Run("When recipe does not exists it returns an error", func(t *testing.T) {
 				_, err := repo.GetBySlug(context.Background(), "not-found")
@@ -80,22 +78,19 @@ func TestPgRecipesRepository(t *testing.T) {
 
 				require.NoError(t, err, "error should be nil")
 
-				// compare the recipe with the created one
-				// ignoring created and updayed at
-				recipe.CreatedAt = created.CreatedAt
-				recipe.UpdatedAt = created.UpdatedAt
-
 				require.NotEqual(t, uuid.Nil, created.ID, "created recipe should have an id")
-				require.NotEqual(t, time.Time{}, created.CreatedAt, "created at should not be zero")
-				require.True(t, created.CreatedAt.Before(time.Now()), "created at should be before now")
-				require.NotEqual(t, time.Time{}, created.UpdatedAt, "updated at should not be zero")
-				require.True(t, created.UpdatedAt.Before(time.Now()), "updated at should be before now")
-				RequireRecipeEqual(t, *recipe, *created, "should return the created recipe")
+				require.WithinDuration(t, created.CreatedAt, time.Now(), time.Second, "created at should be before now")
+				require.WithinDuration(t, created.UpdatedAt, time.Now(), time.Second, "updated at should be before now")
+				RequireRecipeEqual(t, *recipe, *created, RecipeEqualityOptions{
+					IgnoreCreatedAt: true,
+					IgnoreUpdatedAt: true,
+					IgnoreID:        true,
+				}, "should return the created recipe")
 
 				dbRecipe, err := repo.GetByID(context.Background(), recipe.ID.String())
-
 				require.NoError(t, err, "error should be nil")
-				RequireRecipeEqual(t, *recipe, *dbRecipe, "recipe should be created in the db")
+
+				RequireRecipeEqual(t, *created, *dbRecipe, RecipeEqualityOptions{}, "recipe should be created in the db")
 			})
 			t.Run("fails if the recipe is duplicated", func(t *testing.T) {
 				recipe := *fixtures[0]
@@ -141,14 +136,16 @@ func TestPgRecipesRepository(t *testing.T) {
 				require.NoError(t, err, "error should be nil")
 
 				require.True(t, updated.UpdatedAt.After(recipe.UpdatedAt), "updated at should be updated")
+				require.WithinDuration(t, updated.UpdatedAt, time.Now(), time.Second, "updated at should be before now")
 
-				recipe.UpdatedAt = updated.UpdatedAt
-				RequireRecipeEqual(t, recipe, *updated, "should return the updated recipe")
+				RequireRecipeEqual(t, recipe, *updated, RecipeEqualityOptions{
+					IgnoreUpdatedAt: true,
+				}, "should return the updated recipe")
 
 				dbRecipe, err := repo.GetByID(context.Background(), recipe.ID.String())
 
 				require.NoError(t, err, "error should be nil")
-				RequireRecipeEqual(t, recipe, *dbRecipe, "recipe should be updated in the db")
+				RequireRecipeEqual(t, *updated, *dbRecipe, RecipeEqualityOptions{}, "recipe should be updated in the db")
 			})
 			t.Run("return ErrConstrain if the ingredients do not exist", func(t *testing.T) {
 				recipe := new(recipes.Recipe)
@@ -191,30 +188,4 @@ func TestPgRecipesRepository(t *testing.T) {
 			})
 		})
 	})
-}
-
-func RequireRecipeEqual(t *testing.T, expected, got recipes.Recipe, msgAndArgs ...interface{}) {
-	t.Helper()
-
-	slices.SortFunc(expected.Ingredients, func(l, r recipes.RecipeIngredient) int {
-		return strings.Compare(l.Name, r.Name)
-	})
-	slices.SortFunc(got.Ingredients, func(l, r recipes.RecipeIngredient) int {
-		return strings.Compare(l.Name, r.Name)
-	})
-
-	require.Equal(t, expected, got, msgAndArgs...)
-}
-
-func RequireRecipesEqual(t *testing.T, expected, got []recipes.Recipe, msgAndArgs ...interface{}) {
-	t.Helper()
-
-	slices.SortFunc(expected, func(l, r recipes.Recipe) int {
-		return strings.Compare(l.Title, r.Title)
-	})
-	slices.SortFunc(got, func(l, r recipes.Recipe) int {
-		return strings.Compare(l.Title, r.Title)
-	})
-
-	require.Equal(t, expected, got, msgAndArgs...)
 }

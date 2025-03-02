@@ -228,7 +228,7 @@ type RecipeWithoutIngredients struct {
 }
 
 type GetRecipesResponse struct {
-	Recipes []RecipeWithoutIngredients `json:"recipes" tstype:",required"`
+	Recipes []GetRecipeResponse `json:"recipes" tstype:",required"`
 }
 
 func (res GetRecipesResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
@@ -236,21 +236,11 @@ func (res GetRecipesResponse) Render(_ http.ResponseWriter, _ *http.Request) err
 }
 
 func MakeGetRecipesResponse(recipes []Recipe) *GetRecipesResponse {
-	list := []RecipeWithoutIngredients{}
+	list := []GetRecipeResponse{}
 	for _, r := range recipes {
-		list = append(list, RecipeWithoutIngredients{
-			ID:          r.ID,
-			Title:       r.Title,
-			Headline:    r.Headline,
-			CreatedAt:   r.CreatedAt,
-			UpdatedAt:   r.UpdatedAt,
-			Description: r.Description,
-			Steps:       r.Steps,
-			PrepTime:    r.PrepTime,
-			Servings:    r.Servings,
-			URL:         r.URL,
-			Tags:        r.Tags,
-			Slug:        r.Slug(),
+		list = append(list, GetRecipeResponse{
+			Recipe: &r,
+			Slug:   r.Slug(),
 		})
 	}
 

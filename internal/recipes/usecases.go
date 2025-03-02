@@ -3,6 +3,7 @@ package recipes
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/AlejandroHerr/cookbook/internal/common"
 	"github.com/AlejandroHerr/cookbook/internal/common/logging"
@@ -144,7 +145,7 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		servings = dto.Servings
 	}
 
-	recipe := Recipe{ //nolint:exhaustruct
+	recipe := Recipe{
 		ID:          id,
 		Title:       dto.Title,
 		Headline:    &dto.Headline,
@@ -155,6 +156,8 @@ func (u UseCases) Update(ctx context.Context, id uuid.UUID, dto *CreateUpdateRec
 		URL:         &dto.URL,
 		Tags:        dto.Tags,
 		Ingredients: recipeIngredients,
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 	}
 
 	updated, err := u.recipesRepo.Update(ctxWithTransaction, recipe)

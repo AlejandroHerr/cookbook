@@ -1,3 +1,4 @@
+//nolint:exhaustruct
 package recipes_test
 
 import (
@@ -94,22 +95,8 @@ func TestRecipesRouter(t *testing.T) {
 				require.Equal(t, len(dbRecipes), len(fetched.Recipes), "should return the same number of recipes")
 
 				for i := range fetched.Recipes {
-					got := recipes.Recipe{
-						ID:          fetched.Recipes[i].ID,
-						Title:       fetched.Recipes[i].Title,
-						Headline:    fetched.Recipes[i].Headline,
-						Description: fetched.Recipes[i].Description,
-						Steps:       fetched.Recipes[i].Steps,
-						PrepTime:    fetched.Recipes[i].PrepTime,
-						Servings:    fetched.Recipes[i].Servings,
-						URL:         fetched.Recipes[i].URL,
-						Tags:        fetched.Recipes[i].Tags,
-						CreatedAt:   fetched.Recipes[i].CreatedAt,
-						UpdatedAt:   fetched.Recipes[i].UpdatedAt,
-						Ingredients: nil,
-					}
-
-					require.Equal(t, dbRecipes[i], got, "should be the recipe "+strconv.Itoa(i)+" in the db")
+					r := *fetched.Recipes[i].Recipe
+					RequireRecipeEqual(t, dbRecipes[i], r, RecipeEqualityOptions{}, "should be the recipe "+strconv.Itoa(i)+" in the db")
 				}
 			})
 		})
@@ -138,16 +125,26 @@ func TestRecipesRouter(t *testing.T) {
 				require.NoError(t, err, "response should be a CreateRecipeResponse")
 
 				require.NotEqual(t, uuid.Nil, fetched.ID, "id should not be nil")
-				require.Equal(t, recipeDTO.Title, fetched.Title, "title should be equal")
-				require.Equal(t, recipeDTO.Headline, *fetched.Headline, "headline should be equal")
-				require.Equal(t, recipeDTO.Description, *fetched.Description, "description should be equal")
-				require.Equal(t, recipeDTO.Steps, *fetched.Steps, "steps should be equal")
-				require.Equal(t, recipeDTO.PrepTime, *fetched.PrepTime, "prepTime should be equal")
-				require.Equal(t, recipeDTO.Servings, fetched.Servings, "servings should be equal")
-				require.Equal(t, recipeDTO.URL, *fetched.URL, "url should be equal")
-				require.Equal(t, recipeDTO.Tags, fetched.Tags, "tags should be equal")
-				require.True(t, fetched.CreatedAt.Before(time.Now()), "created at should be before now")
-				require.True(t, fetched.UpdatedAt.Before(time.Now()), "updated at should be before now")
+				require.WithinDuration(t, fetched.CreatedAt, time.Now(), time.Second, "created at should be before now")
+				require.WithinDuration(t, fetched.UpdatedAt, time.Now(), time.Second, "updated at should be before now")
+
+				expectedRecipe := recipes.Recipe{ //nolint:exhaustruct
+					Title:       recipeDTO.Title,
+					Headline:    &recipeDTO.Headline,
+					Description: &recipeDTO.Description,
+					Steps:       &recipeDTO.Steps,
+					PrepTime:    &recipeDTO.PrepTime,
+					Servings:    recipeDTO.Servings,
+					URL:         &recipeDTO.URL,
+					Tags:        recipeDTO.Tags,
+				}
+				RequireRecipeEqual(t, expectedRecipe, *fetched.Recipe, RecipeEqualityOptions{
+					IgnoreID:          true,
+					IgnoreCreatedAt:   true,
+					IgnoreUpdatedAt:   true,
+					IgnoreIngredients: true,
+				}, "should be the recipe in the response")
+
 				require.Equal(t, len(recipeDTO.Ingredients), len(fetched.Ingredients), "ingredients should have equal length")
 
 				for i := range fetched.Ingredients {
@@ -161,7 +158,7 @@ func TestRecipesRouter(t *testing.T) {
 				dbRecipe, err := ts.recipesRepo.GetBySlug(context.Background(), fetched.Slug)
 				require.NoError(t, err, "new recipe should be in the db")
 
-				RequireRecipeEqual(t, *fetched.Recipe, *dbRecipe, "fetched recipe should be equal to the one in the db")
+				RequireRecipeEqual(t, *fetched.Recipe, *dbRecipe, RecipeEqualityOptions{}, "fetched recipe should be equal to the one in the db")
 			})
 			t.Run("return a Bad Request Status if data is invalid", func(t *testing.T) {
 				var recipeDTO recipes.CreateUpdateRecipeDTO
@@ -320,18 +317,24 @@ func TestRecipesRouter(t *testing.T) {
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be a CreateRecipeResponse")
 
-				require.Equal(t, recipeToUpdate.ID, fetched.ID, "should be the same id")
-				require.Equal(t, recipeDTO.Title, fetched.Title, "title should be equal")
-				require.Equal(t, recipeDTO.Headline, *fetched.Headline, "headline should be equal")
-				require.Equal(t, recipeDTO.Description, *fetched.Description, "description should be equal")
-				require.Equal(t, recipeDTO.Steps, *fetched.Steps, "steps should be equal")
-				require.Equal(t, recipeDTO.PrepTime, *fetched.PrepTime, "prepTime should be equal")
-				require.Equal(t, recipeDTO.Servings, fetched.Servings, "servings should be equal")
-				require.Equal(t, recipeDTO.URL, *fetched.URL, "url should be equal")
-				require.Equal(t, recipeDTO.Tags, fetched.Tags, "tags should be equal")
-				require.Equal(t, recipeToUpdate.CreatedAt, fetched.CreatedAt, "created at should be before now")
-				require.True(t, fetched.UpdatedAt.Before(time.Now()), "updated at should be before now")
-				require.Equal(t, len(recipeDTO.Ingredients), len(fetched.Ingredients), "ingredients should have equal length")
+				expectedRecipe := recipes.Recipe{ //nolint:exhaustruct
+					ID:          recipeToUpdate.ID,
+					Title:       recipeDTO.Title,
+					Headline:    &recipeDTO.Headline,
+					Description: &recipeDTO.Description,
+					Steps:       &recipeDTO.Steps,
+					PrepTime:    &recipeDTO.PrepTime,
+					Servings:    recipeDTO.Servings,
+					URL:         &recipeDTO.URL,
+					Tags:        recipeDTO.Tags,
+					CreatedAt:   recipeToUpdate.CreatedAt,
+					UpdatedAt:   recipeToUpdate.UpdatedAt,
+				}
+
+				RequireRecipeEqual(t, expectedRecipe, *fetched.Recipe, RecipeEqualityOptions{
+					IgnoreUpdatedAt:   true,
+					IgnoreIngredients: true,
+				}, "should be the recipe in the response")
 
 				for i := range fetched.Ingredients {
 					require.NotEqual(t, uuid.Nil, fetched.Ingredients[i].ID, "recipeIngredient id should not be nil")
@@ -344,7 +347,7 @@ func TestRecipesRouter(t *testing.T) {
 				dbRecipe, err := ts.recipesRepo.GetBySlug(context.Background(), fetched.Slug)
 				require.NoError(t, err, "updated recipe should be in the db")
 
-				RequireRecipeEqual(t, *fetched.Recipe, *dbRecipe, "fetched recipe should be equal to the one in the db")
+				RequireRecipeEqual(t, *fetched.Recipe, *dbRecipe, RecipeEqualityOptions{}, "fetched recipe should be equal to the one in the db")
 			})
 			t.Run("return a Bad Request Status if data is invalid", func(t *testing.T) {
 				recipeToUpdate := fixtures[10]
