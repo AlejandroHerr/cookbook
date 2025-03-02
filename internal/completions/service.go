@@ -94,7 +94,7 @@ func (s OpenAIService) CompleteRecipe(ctx context.Context, content string) (*Rec
 	decoder := json.NewDecoder(reader)
 
 	for {
-		if err = decoder.Decode(&result); err == io.EOF {
+		if err = decoder.Decode(&result); errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return nil, fmt.Errorf("decode stream: %w", err)

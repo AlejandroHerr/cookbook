@@ -41,7 +41,7 @@ func getOptionsHander(useCases *UseCases, entity string) http.HandlerFunc {
 			return
 		}
 
-		if err := render.Render(w, r, &GetSuggestionsReponse{Options: options}); err != nil {
+		if err = render.Render(w, r, &GetSuggestionsReponse{Options: options}); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}

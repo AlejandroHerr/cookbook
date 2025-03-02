@@ -76,10 +76,6 @@ func TestRouter(t *testing.T) {
 			aiService.AssertCalled(t, "CompleteRecipe", mock.Anything, scrapedURL)
 		})
 		t.Run("returns a Bad Request error if the url is invalid", func(t *testing.T) {
-			cache := new(completions.MockCache)
-			scrapper := new(completions.MockScrapper)
-			aiService := new(completions.MockAIService)
-
 			usecases := completions.MakeUseCases(cache, scrapper, aiService, logging.NewVoidLogger())
 
 			url := "http://example.com/recipe-3"

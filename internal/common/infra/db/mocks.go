@@ -63,7 +63,7 @@ func (m *MockTx) Prepare(ctx context.Context, name, sql string) (*pgconn.Stateme
 	return args.Get(0).(*pgconn.StatementDescription), args.Error(1)
 }
 
-func (m *MockTx) Exec(ctx context.Context, sql string, arguments ...any) (commandTag pgconn.CommandTag, err error) {
+func (m *MockTx) Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error) {
 	args := m.Called(ctx, sql, arguments)
 
 	return args.Get(0).(pgconn.CommandTag), args.Error(1)

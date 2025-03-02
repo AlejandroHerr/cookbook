@@ -36,7 +36,7 @@ func getAllRecipesHandler(useCases *UseCases) http.HandlerFunc {
 			return
 		}
 
-		if err := render.Render(w, r, MakeGetRecipesResponse(list)); err != nil {
+		if err = render.Render(w, r, MakeGetRecipesResponse(list)); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}
@@ -77,7 +77,7 @@ func createRecipeHandler(useCases *UseCases) http.HandlerFunc {
 			return
 		}
 
-		if err := render.Render(w, r, makeCreateRecipeResponse(recipe)); err != nil {
+		if err = render.Render(w, r, makeCreateRecipeResponse(recipe)); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}
@@ -163,7 +163,7 @@ func updateRecipeHandler(useCases *UseCases) http.HandlerFunc {
 			return
 		}
 
-		if err := render.Render(w, r, makeUpdateUpdateRecipeResponse(recipe)); err != nil {
+		if err = render.Render(w, r, makeUpdateUpdateRecipeResponse(recipe)); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}

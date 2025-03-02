@@ -98,7 +98,7 @@ func (repo PgSuggestionsRepo) findOptions(ctx context.Context, query string, arg
 
 	for rows.Next() {
 		var n string
-		if err := rows.Scan(&n); err != nil {
+		if err = rows.Scan(&n); err != nil {
 			return nil, fmt.Errorf("scan row: %w", err)
 		}
 

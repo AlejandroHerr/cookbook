@@ -12,7 +12,7 @@ import (
 
 func MustMakeFixtures(count int) []*Recipe {
 	recipes := make([]*Recipe, count)
-	for i := 0; i < count; i++ {
+	for i := range count {
 		err := gofakeit.Struct(&recipes[i])
 		if err != nil {
 			panic(err)
@@ -34,11 +34,11 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
         RETURNING
           created_at, updated_at
       `,
-			recipe.ID, recipe.Title, recipe.Headline, recipe.Description, recipe.Steps, recipe.PrepTime, recipe.Servings, recipe.URL, recipe.Tags, recipe.Slug,
+			recipe.ID, recipe.Title, recipe.Headline, recipe.Description, recipe.Steps, recipe.PrepTime, recipe.Servings, recipe.URL, recipe.Tags, recipe.Slug, //nolint:lll
 		)
 
 		if err := row.Scan(&recipe.CreatedAt, &recipe.UpdatedAt); err != nil {
-			return fmt.Errorf("scanning recipe: %v", err)
+			return fmt.Errorf("scanning recipe: %w", err)
 		}
 
 		recipeIDs := make([]uuid.UUID, 0)
@@ -67,7 +67,7 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
 			ingredientIDs, ingredientNames, ingredientKinds,
 		)
 		if err != nil {
-			return fmt.Errorf("inserting ingredients: %v", err)
+			return fmt.Errorf("inserting ingredients: %w", err)
 		}
 
 		_, err = pool.Exec(
@@ -80,7 +80,7 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
 			recipeIDs, ingredientIDs, ingredientUnits, ingredientQuantities,
 		)
 		if err != nil {
-			return fmt.Errorf("inserting recipe ingredients: %v", err)
+			return fmt.Errorf("inserting recipe ingredients: %w", err)
 		}
 	}
 

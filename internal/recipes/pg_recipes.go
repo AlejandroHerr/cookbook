@@ -7,7 +7,6 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -43,7 +42,7 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 	for rows.Next() {
 		recipe := Recipe{} //nolint: exhaustruct
 
-		if err := rows.Scan(
+		if err = rows.Scan(
 			&recipe.ID,
 			&recipe.Title,
 			&recipe.Slug,
@@ -138,7 +137,7 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
 	for rows.Next() {
 		ri := RecipeIngredient{} //nolint: exhaustruct
 
-		err := rows.Scan(&ri.ID, &ri.Name, &ri.Kind, &ri.Unit, &ri.Quantity)
+		err = rows.Scan(&ri.ID, &ri.Name, &ri.Kind, &ri.Unit, &ri.Quantity)
 		if err != nil {
 			return nil, fmt.Errorf("scanning recipe_ingredients row: %w", err)
 		}
@@ -291,7 +290,7 @@ func (repo PgRecipesRepo) Delete(ctx context.Context, recipeID string) error {
 	return nil
 }
 
-func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor db.BatcherExecutorQuerier, recipeID uuid.UUID, ingredients []RecipeIngredient) error {
+func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor db.BatcherExecutorQuerier, recipeID uuid.UUID, ingredients []RecipeIngredient) error { //nolint:lll
 	batch := &pgx.Batch{} //nolint: exhaustruct
 	recipeIngredientsQuery := `
     INSERT INTO
@@ -312,7 +311,7 @@ func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor 
 	batchResult := executor.SendBatch(ctx, batch)
 	defer batchResult.Close()
 
-	for i := 0; i < batch.Len(); i++ {
+	for i := range batch.Len() {
 		_, err := batchResult.Exec()
 		if err != nil {
 			return fmt.Errorf("error executing batched query at index %d: %w", i, err)
@@ -342,7 +341,7 @@ func (repo PgRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (stri
 
 	for rows.Next() {
 		var existingSlug string
-		if err := rows.Scan(&existingSlug); err != nil {
+		if err = rows.Scan(&existingSlug); err != nil {
 			return "", fmt.Errorf("scanning existing slug: %w", err)
 		}
 

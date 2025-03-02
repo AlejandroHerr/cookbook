@@ -20,7 +20,7 @@ func MakePgIngredientsRepo(pool *pgxpool.Pool) *PgIngredientsRepo {
 	}
 }
 
-func (repo PgIngredientsRepo) UpsertMany(ctx context.Context, ingredients []CreateRecipeIngredientDTO) ([]RecipeIngredient, error) {
+func (repo PgIngredientsRepo) UpsertMany(ctx context.Context, ingredients []CreateRecipeIngredientDTO) ([]RecipeIngredient, error) { //nolint:lll
 	client := db.GetBatcherExecutorQuerier(ctx, repo.pool)
 
 	query := `

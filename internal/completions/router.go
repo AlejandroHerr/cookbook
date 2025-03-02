@@ -37,7 +37,7 @@ func completeRecipeHandler(useCases *UseCases) http.HandlerFunc {
 			return
 		}
 
-		if err := render.Render(w, r, &CompleteRecipeResponse{Recipe: *recipe}); err != nil {
+		if err = render.Render(w, r, &CompleteRecipeResponse{Recipe: *recipe}); err != nil {
 			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
 			return
 		}

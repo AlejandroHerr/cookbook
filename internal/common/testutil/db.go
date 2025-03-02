@@ -3,7 +3,6 @@ package testutil
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 
@@ -19,9 +18,9 @@ const (
 	defaultTestDBName     = "tests"
 )
 
-// DefaultTestDBConfig returns default test database configuration
-// which can be overridden by environment variables
-func DefaultTestDBConfig() (*db.Config, error) {
+// defaultTestDBConfig returns default test database configuration.
+// which can be overridden by environment variables.
+func defaultTestDBConfig() (*db.Config, error) {
 	user := getEnv("POSTGRES_USER", defaultTestDBUser)
 	password := getEnv("POSTGRES_PASSWORD", defaultTestDBPassword)
 	// string to int
@@ -39,22 +38,22 @@ func DefaultTestDBConfig() (*db.Config, error) {
 	}, nil
 }
 
-// MustConnect creates a new database connection or panics
+// MustConnect creates a new database connection or panics.
 func MustConnect(ctx context.Context) *pgxpool.Pool {
-	config, err := DefaultTestDBConfig()
+	config, err := defaultTestDBConfig()
 	if err != nil {
-		log.Fatalf("failed to get test database config: %v", err)
+		panic(fmt.Errorf("defaultTestDBConfig: %w", err))
 	}
 
 	pool, err := db.Connect(ctx, config, 60, nil)
 	if err != nil {
-		log.Fatalf("failed to connect to test database: %v", err)
+		panic(fmt.Errorf("connect: %w", err))
 	}
 
 	return pool
 }
 
-// helper function to get environment variable with default fallback
+// helper function to get environment variable with default fallback.
 func getEnv(key, fallback string) string {
 	if value, exists := os.LookupEnv(key); exists {
 		return value

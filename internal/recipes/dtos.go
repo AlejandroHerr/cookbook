@@ -25,7 +25,7 @@ type CreateRecipeIngredientDTO struct {
 }
 
 func (i CreateUpdateRecipeDTO) Fake(gofakeit *gofakeit.Faker) (any, error) {
-	ingredients := make([]CreateRecipeIngredientDTO, 5)
+	ingredients := make([]CreateRecipeIngredientDTO, 5) //nolint:mnd
 
 	for i := range ingredients {
 		var ingredient CreateRecipeIngredientDTO

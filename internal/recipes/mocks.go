@@ -55,7 +55,7 @@ type MockIngredientsRepo struct {
 	mock.Mock
 }
 
-func (m *MockIngredientsRepo) UpsertMany(ctx context.Context, ingredients []CreateRecipeIngredientDTO) ([]RecipeIngredient, error) {
+func (m *MockIngredientsRepo) UpsertMany(ctx context.Context, ingredients []CreateRecipeIngredientDTO) ([]RecipeIngredient, error) { //nolint:lll
 	args := m.Called(ctx, ingredients)
 	return args.Get(0).([]RecipeIngredient), args.Error(1)
 }

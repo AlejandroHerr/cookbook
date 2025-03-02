@@ -150,7 +150,7 @@ func TestRecipesRouter(t *testing.T) {
 
 				for i := range fetched.Ingredients {
 					require.NotEqual(t, uuid.Nil, fetched.Ingredients[i].ID, "recipeIngredient id should not be nil")
-					require.Equal(t, recipeDTO.Ingredients[i].Quantity, fetched.Ingredients[i].Quantity, "recipeIngredient quantity should be equal")
+					require.InEpsilon(t, recipeDTO.Ingredients[i].Quantity, fetched.Ingredients[i].Quantity, 0.001, "recipeIngredient quantity should be equal")
 					require.Equal(t, recipeDTO.Ingredients[i].Unit, fetched.Ingredients[i].Unit, "recipeIngredient unit should be equal")
 					require.Equal(t, recipeDTO.Ingredients[i].Name, fetched.Ingredients[i].Name, "recipeIngredient name should be equal")
 					require.Nil(t, fetched.Ingredients[i].Kind, "recipeIngredient kind should be nil")
@@ -316,7 +316,7 @@ func TestRecipesRouter(t *testing.T) {
 
 				for i := range fetched.Ingredients {
 					require.NotEqual(t, uuid.Nil, fetched.Ingredients[i].ID, "recipeIngredient id should not be nil")
-					require.Equal(t, recipeDTO.Ingredients[i].Quantity, fetched.Ingredients[i].Quantity, "recipeIngredient quantity should be equal")
+					require.InEpsilon(t, recipeDTO.Ingredients[i].Quantity, fetched.Ingredients[i].Quantity, 0.001, "recipeIngredient quantity should be equal")
 					require.Equal(t, recipeDTO.Ingredients[i].Unit, fetched.Ingredients[i].Unit, "recipeIngredient unit should be equal")
 					require.Equal(t, recipeDTO.Ingredients[i].Name, fetched.Ingredients[i].Name, "recipeIngredient name should be equal")
 					require.Nil(t, fetched.Ingredients[i].Kind, "recipeIngredient kind should be nil")

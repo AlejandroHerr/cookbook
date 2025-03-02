@@ -9,7 +9,7 @@ import (
 
 	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHTTPScrapper(t *testing.T) {
@@ -40,17 +40,17 @@ func TestHTTPScrapper(t *testing.T) {
 		t.Run("returns the scrapped URL", func(t *testing.T) {
 			value, err := s.Scrap(context.Background(), ts.URL)
 
-			assert.NoError(t, err, "should not return an error")
-			assert.Contains(t, value, recipeBody, "should return the same recipe")
+			require.NoError(t, err, "should not return an error")
+			require.Contains(t, value, recipeBody, "should return the same recipe")
 		})
 		t.Run("returns an HTTPClientError when the http request fails", func(t *testing.T) {
 			_, err := s.Scrap(context.Background(), ts.URL+"/not-found")
 
 			var httpClientError *completions.HTTPClientError
 
-			assert.ErrorAs(t, err, &httpClientError, "should return an HTTPClientError")
-			assert.Equal(t, http.StatusNotFound, httpClientError.StatusCode, "should contain the HttpStausCode")
-			assert.Equal(t, errorBody+"\n", httpClientError.Response, "should contain the server response")
+			require.ErrorAs(t, err, &httpClientError, "should return an HTTPClientError")
+			require.Equal(t, http.StatusNotFound, httpClientError.StatusCode, "should contain the HttpStausCode")
+			require.Equal(t, errorBody+"\n", httpClientError.Response, "should contain the server response")
 		})
 	})
 }

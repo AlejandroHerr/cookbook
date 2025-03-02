@@ -95,7 +95,7 @@ func run() error {
 	r.Mount("/suggestions", suggestionsRouter)
 	r.Mount("/completions", completionsRouter)
 
-	server := &http.Server{ //nolint: exhaustruct
+	server := &http.Server{
 		Addr:              ":8080",
 		Handler:           r,
 		ReadHeaderTimeout: 3 * time.Second,

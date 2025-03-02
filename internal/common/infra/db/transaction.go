@@ -88,7 +88,7 @@ type BatcherExecutorQuerier interface {
 
 func GetBatcherExecutorQuerier(ctx context.Context, beq BatcherExecutorQuerier) BatcherExecutorQuerier {
 	if session, ok := ctx.Value(common.TransactionContextKey{}).(*PgxTransaction); ok {
-		if tx, ok := session.Transaction().(pgx.Tx); ok {
+		if tx, isTx := session.Transaction().(pgx.Tx); isTx {
 			return tx
 		}
 	}
