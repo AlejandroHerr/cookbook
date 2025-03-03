@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common/logger"
 	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/mock"
@@ -21,7 +21,7 @@ func TestUsecases(t *testing.T) {
 			scrapper := new(completions.MockScrapper)
 			aiService := new(completions.MockAIService)
 
-			usecases := completions.MakeUseCases(cache, scrapper, aiService, logging.NewVoidLogger())
+			usecases := completions.MakeUseCases(cache, scrapper, aiService, logger.NewTestLogger())
 
 			url := "http://example.com/recipe-0"
 
@@ -44,7 +44,7 @@ func TestUsecases(t *testing.T) {
 			scrapper := new(completions.MockScrapper)
 			aiService := new(completions.MockAIService)
 
-			usecases := completions.MakeUseCases(cache, scrapper, aiService, logging.NewVoidLogger())
+			usecases := completions.MakeUseCases(cache, scrapper, aiService, logger.NewTestLogger())
 
 			url := "http://example.com/recipe-1"
 

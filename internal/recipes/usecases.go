@@ -3,10 +3,10 @@ package recipes
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/AlejandroHerr/cookbook/internal/common"
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
 	"github.com/google/uuid"
 )
 
@@ -28,14 +28,14 @@ type UseCases struct {
 	recipesRepo        RecipesRepo
 	ingredientsRepo    IngredientsRepo
 	transactionManager common.TransactionManager
-	logger             logging.Logger
+	logger             *slog.Logger
 }
 
 func MakeUseCases(
 	transactionManager common.TransactionManager,
 	recipesRepo RecipesRepo,
 	ingredientsRepo IngredientsRepo,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) *UseCases {
 	return &UseCases{
 		transactionManager: transactionManager,
@@ -62,7 +62,9 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 
 	defer func() {
 		err = transaction.Rollback()
-		u.logger.Errorw("error rolling back transaction", "error", err)
+		if err != nil {
+			u.logger.WarnContext(ctx, "error rolling back transaction", slog.Any("error", err))
+		}
 	}()
 
 	ctxWithTransaction := context.WithValue(ctx, common.TransactionContextKey{}, transaction)
@@ -105,7 +107,7 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 
 	commitErr := transaction.Commit()
 	if commitErr != nil {
-		u.logger.Errorw("error committing transaction", "error", commitErr)
+		u.logger.ErrorContext(ctx, "error committing transaction", slog.Any("error", commitErr))
 		return nil, fmt.Errorf("commit transaction: %w", commitErr)
 	}
 
@@ -139,7 +141,13 @@ func (u UseCases) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateR
 
 	defer func() {
 		err = transaction.Rollback()
-		u.logger.Errorw("error rolling back transaction", "error", err)
+		if err != nil {
+			u.logger.WarnContext(
+				ctx,
+				"error rolling back transaction",
+				slog.Any("error", err),
+			)
+		}
 	}()
 
 	ctxWithTransaction := context.WithValue(ctx, common.TransactionContextKey{}, transaction)
@@ -185,7 +193,11 @@ func (u UseCases) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateR
 
 	commitErr := transaction.Commit()
 	if commitErr != nil {
-		u.logger.Errorw("error committing transaction", "error", commitErr)
+		u.logger.ErrorContext(
+			ctx,
+			"error committing transaction",
+			slog.Any("error", commitErr),
+		)
 		return nil, fmt.Errorf("commit transaction: %w", commitErr)
 	}
 

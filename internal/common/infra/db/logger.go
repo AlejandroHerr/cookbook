@@ -2,31 +2,39 @@ package db
 
 import (
 	"context"
+	"log/slog"
 
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
 	"github.com/jackc/pgx/v5"
 )
 
 type PgxLogger struct {
-	logger logging.Logger
+	logger *slog.Logger
 }
 
-func NewPgxLogger(logger logging.Logger) *PgxLogger {
+func NewPgxLogger(logger *slog.Logger) *PgxLogger {
 	return &PgxLogger{
-		logger: logger,
+		logger: logger.With(slog.String("service", "db")),
 	}
 }
 
 func (l PgxLogger) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
-	l.logger.Debugw("query start", "query", data.SQL, "args", data.Args)
+	l.logger.DebugContext(ctx, "query start",
+		"query", data.SQL,
+		"args", data.Args,
+	)
 
 	return ctx
 }
 
-func (l PgxLogger) TraceQueryEnd(_ context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
+func (l PgxLogger) TraceQueryEnd(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryEndData) {
 	if data.Err != nil {
-		l.logger.Errorw("query end", "error", data.Err.Error(), "commandTag", data.CommandTag.String())
+		l.logger.WarnContext(ctx, "query end",
+			slog.Any("error", data.Err),
+			slog.String("commandTag", data.CommandTag.String()),
+		)
 	} else {
-		l.logger.Debugw("query end", "commandTag", data.CommandTag.String())
+		l.logger.DebugContext(ctx, "query end",
+			slog.String("commandTag", data.CommandTag.String()),
+		)
 	}
 }

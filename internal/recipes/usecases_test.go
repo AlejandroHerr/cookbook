@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/AlejandroHerr/cookbook/internal/common"
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common/logger"
 	"github.com/AlejandroHerr/cookbook/internal/common/testutil"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/brianvoe/gofakeit/v7"
@@ -31,7 +31,7 @@ func newTestServices() *testServices {
 	mockRecipesRepo := new(recipes.MockRecipesRepo)
 	mockIngredientsRepo := new(recipes.MockIngredientsRepo)
 
-	useCases := recipes.MakeUseCases(mockTxm, mockRecipesRepo, mockIngredientsRepo, logging.NewVoidLogger())
+	useCases := recipes.MakeUseCases(mockTxm, mockRecipesRepo, mockIngredientsRepo, logger.NewTestLogger())
 
 	return &testServices{
 		mockTxm:             mockTxm,

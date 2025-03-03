@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common/logger"
 	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/go-chi/chi/v5"
@@ -21,7 +21,7 @@ func TestRouter(t *testing.T) {
 	cache := new(completions.MockCache)
 	scrapper := new(completions.MockScrapper)
 	aiService := new(completions.MockAIService)
-	useCases := completions.MakeUseCases(cache, scrapper, aiService, logging.NewVoidLogger())
+	useCases := completions.MakeUseCases(cache, scrapper, aiService, logger.NewTestLogger())
 	router := completions.MakeRouter(useCases)
 
 	r := chi.NewRouter()
@@ -76,8 +76,6 @@ func TestRouter(t *testing.T) {
 			aiService.AssertCalled(t, "CompleteRecipe", mock.Anything, scrapedURL)
 		})
 		t.Run("returns a Bad Request error if the url is invalid", func(t *testing.T) {
-			usecases := completions.MakeUseCases(cache, scrapper, aiService, logging.NewVoidLogger())
-
 			url := "http://example.com/recipe-3"
 
 			cache.On("Get", url).Return([]uint8{}, errors.New("not found"))
@@ -93,7 +91,7 @@ func TestRouter(t *testing.T) {
 
 			aiService.On("CompleteRecipe", context.Background(), scrapedURL).Return(expected, nil)
 
-			got, err := usecases.CompleteRecipe(context.Background(), url)
+			got, err := useCases.CompleteRecipe(context.Background(), url)
 
 			require.NoError(t, err, "should not fail")
 			require.Equal(t, expected, got, "should return the recipe")

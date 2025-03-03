@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"log/slog"
 )
 
 type Cache interface {
@@ -25,14 +24,14 @@ type UseCases struct {
 	cache     Cache
 	scrapper  Scrapper
 	aiService AIService
-	logger    logging.Logger
+	logger    *slog.Logger
 }
 
 func MakeUseCases(
 	cache Cache,
 	scrapper Scrapper,
 	recipeAnalyser AIService,
-	logger logging.Logger,
+	logger *slog.Logger,
 ) *UseCases {
 	return &UseCases{
 		cache:     cache,
@@ -51,9 +50,19 @@ func (u UseCases) CompleteRecipe(ctx context.Context, url string) (*Recipe, erro
 			return &result, nil
 		}
 
-		u.logger.Warnw("error unmarshalling value from cache", "url", url, "error", err)
+		u.logger.WarnContext(
+			ctx,
+			"error unmarshalling value from cache",
+			slog.String("url", url),
+			slog.Any("error", err),
+		)
 	} else {
-		u.logger.Warnw("error reading value from cache", "url", url, "error", err)
+		u.logger.WarnContext(
+			ctx,
+			"error reading value from cache",
+			slog.String("url", url),
+			slog.Any("error", err),
+		)
 	}
 
 	content, err := u.scrapper.Scrap(ctx, url)
@@ -68,10 +77,20 @@ func (u UseCases) CompleteRecipe(ctx context.Context, url string) (*Recipe, erro
 
 	if cached, err := json.Marshal(completion); err == nil {
 		if err = u.cache.Set(url, cached); err != nil {
-			u.logger.Errorw("error saving in cache", "url", url, "error", err)
+			u.logger.WarnContext(
+				ctx,
+				"error saving in cache",
+				slog.String("url", url),
+				slog.Any("error", err),
+			)
 		}
 	} else {
-		u.logger.Errorw("error marshaling for cache", "url", url, "error", err)
+		u.logger.WarnContext(
+			ctx,
+			"error marshaling for cache",
+			slog.String("url", url),
+			slog.Any("error", err),
+		)
 	}
 
 	return completion, nil

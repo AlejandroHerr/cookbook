@@ -14,7 +14,7 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/common"
 	"github.com/AlejandroHerr/cookbook/internal/common/api"
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common/logger"
 	"github.com/AlejandroHerr/cookbook/internal/common/testutil"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/go-chi/chi/v5"
@@ -41,7 +41,7 @@ func setupTestServer(t *testing.T) *testServer {
 	transactionManager := db.MakePgxTransactionManager(pgPool)
 
 	// Initialize VoidLogger
-	logger := logging.NewVoidLogger()
+	logger := logger.NewTestLogger()
 
 	// Initialize services
 	useCases := recipes.MakeUseCases(transactionManager, recipesRepo, ingredientsRepo, logger)
