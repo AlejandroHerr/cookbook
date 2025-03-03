@@ -4,18 +4,18 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 )
 
 type PgSuggestionsRepo struct {
-	pool *pgxpool.Pool
+	pgxDB db.PGXDB
 }
 
 var _ Repo = (*PgSuggestionsRepo)(nil)
 
-func MakePgSuggestionsRepo(pool *pgxpool.Pool) *PgSuggestionsRepo {
+func MakePgSuggestionsRepo(pgxDB db.PGXDB) *PgSuggestionsRepo {
 	return &PgSuggestionsRepo{
-		pool: pool,
+		pgxDB: pgxDB,
 	}
 }
 
@@ -88,7 +88,7 @@ func (repo PgSuggestionsRepo) FindAllIngredients(ctx context.Context) ([]Option,
 }
 
 func (repo PgSuggestionsRepo) findOptions(ctx context.Context, query string, args ...any) ([]Option, error) {
-	rows, err := repo.pool.Query(ctx, query, args...)
+	rows, err := repo.pgxDB.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("execute query: %w", err)
 	}

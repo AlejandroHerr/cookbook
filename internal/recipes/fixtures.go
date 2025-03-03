@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func MustMakeFixtures(count int) []*Recipe {
@@ -22,9 +22,9 @@ func MustMakeFixtures(count int) []*Recipe {
 	return recipes
 }
 
-func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe) error {
+func InstertFixtures(ctx context.Context, pgxDB db.PGXDB, fixtures []*Recipe) error {
 	for _, recipe := range fixtures {
-		row := pool.QueryRow(
+		row := pgxDB.QueryRow(
 			ctx,
 			`
         INSERT INTO
@@ -57,7 +57,7 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
 			ingredientKinds = append(ingredientKinds, *ingredient.Kind)
 		}
 
-		_, err := pool.Exec(
+		_, err := pgxDB.Exec(
 			ctx,
 			`
         INSERT INTO
@@ -70,7 +70,7 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
 			return fmt.Errorf("inserting ingredients: %w", err)
 		}
 
-		_, err = pool.Exec(
+		_, err = pgxDB.Exec(
 			ctx,
 			`
         INSERT INTO
@@ -87,8 +87,8 @@ func InstertFixtures(ctx context.Context, pool *pgxpool.Pool, fixtures []*Recipe
 	return nil
 }
 
-func MustCleanUpFixtures(ctx context.Context, pool *pgxpool.Pool) {
-	_, err := pool.Exec(
+func MustCleanUpFixtures(ctx context.Context, pgxDB db.PGXDB) {
+	_, err := pgxDB.Exec(
 		ctx,
 		"DELETE FROM recipes",
 	)
@@ -96,7 +96,7 @@ func MustCleanUpFixtures(ctx context.Context, pool *pgxpool.Pool) {
 		log.Fatalf("cleaning up recipes: %v", err)
 	}
 
-	_, err = pool.Exec(
+	_, err = pgxDB.Exec(
 		ctx,
 		"DELETE FROM Ingredients",
 	)

@@ -5,23 +5,22 @@ import (
 	"fmt"
 
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PgIngredientsRepo struct {
-	pool *pgxpool.Pool
+	pgxDB db.PGXDB
 }
 
 var _ IngredientsRepo = (*PgIngredientsRepo)(nil)
 
-func MakePgIngredientsRepo(pool *pgxpool.Pool) *PgIngredientsRepo {
+func MakePgIngredientsRepo(pgxDB db.PGXDB) *PgIngredientsRepo {
 	return &PgIngredientsRepo{
-		pool: pool,
+		pgxDB: pgxDB,
 	}
 }
 
 func (repo PgIngredientsRepo) UpsertMany(ctx context.Context, ingredients []CreateRecipeIngredientDTO) ([]RecipeIngredient, error) { //nolint:lll
-	client := db.GetBatcherExecutorQuerier(ctx, repo.pool)
+	pgxDB := db.GetPGXDB(ctx, repo.pgxDB)
 
 	query := `
     INSERT INTO ingredients (name)
@@ -34,7 +33,7 @@ func (repo PgIngredientsRepo) UpsertMany(ctx context.Context, ingredients []Crea
 	recipeIngredients := make([]RecipeIngredient, len(ingredients))
 
 	for i, ingredient := range ingredients {
-		row := client.QueryRow(ctx, query, ingredient.Name)
+		row := pgxDB.QueryRow(ctx, query, ingredient.Name)
 
 		err := row.Scan(&recipeIngredients[i].ID, &recipeIngredients[i].Name, &recipeIngredients[i].Kind)
 		if err != nil {

@@ -8,18 +8,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PgRecipesRepo struct {
-	pool *pgxpool.Pool
+	pgxDB db.PGXDB
 }
 
 var _ RecipesRepo = (*PgRecipesRepo)(nil)
 
-func MakePgRecipesRepository(pool *pgxpool.Pool) *PgRecipesRepo {
+func MakePgRecipesRepository(pgxDB db.PGXDB) *PgRecipesRepo {
 	return &PgRecipesRepo{
-		pool: pool,
+		pgxDB: pgxDB,
 	}
 }
 
@@ -31,7 +30,7 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
       recipes
   `
 
-	rows, err := repo.pool.Query(ctx, query)
+	rows, err := repo.pgxDB.Query(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("quering recipes: %w", db.HandlePgError(err))
 	}
@@ -84,7 +83,7 @@ func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (
       recipes      
     WHERE ` + field + ` = $1
   `
-	row := repo.pool.QueryRow(ctx, query, value)
+	row := repo.pgxDB.QueryRow(ctx, query, value)
 
 	recipe := new(Recipe)
 
@@ -126,7 +125,7 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
     WHERE 
       ri.recipe_id = $1`
 
-	rows, err := repo.pool.Query(ctx, query, recipeID)
+	rows, err := repo.pgxDB.Query(ctx, query, recipeID)
 	if err != nil {
 		return nil, fmt.Errorf("querying recipe_ingredients: %w", err)
 	}
@@ -149,7 +148,7 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
 }
 
 func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, error) {
-	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
+	pgxDB := db.GetPGXDB(ctx, repo.pgxDB)
 
 	sql := `
     INSERT INTO
@@ -172,7 +171,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 		"tags":        recipe.Tags,
 	}
 
-	row := executor.QueryRow(ctx, sql, values)
+	row := pgxDB.QueryRow(ctx, sql, values)
 
 	createdRecipe := new(Recipe)
 	if err := row.Scan(
@@ -192,7 +191,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 		return nil, fmt.Errorf("executing insert recipe query: %w", db.HandlePgError(err))
 	}
 
-	err := repo.insertRecipeIngredients(ctx, executor, recipe.ID, recipe.Ingredients)
+	err := repo.insertRecipeIngredients(ctx, pgxDB, recipe.ID, recipe.Ingredients)
 	if err != nil {
 		return nil, fmt.Errorf("inserting recipe ingredients: %w", db.HandlePgError(err))
 	}
@@ -203,7 +202,7 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 }
 
 func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, error) {
-	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
+	pgxDB := db.GetPGXDB(ctx, repo.pgxDB)
 
 	sql := `
     UPDATE 
@@ -237,7 +236,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		"slug":        recipe.Slug,
 	}
 
-	row := executor.QueryRow(ctx, sql, values)
+	row := pgxDB.QueryRow(ctx, sql, values)
 
 	updatedRecipe := new(Recipe)
 
@@ -258,7 +257,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		return nil, fmt.Errorf("executing update recipe query: %w", db.HandlePgError(err))
 	}
 
-	_, err := executor.Exec(
+	_, err := pgxDB.Exec(
 		ctx,
 		"DELETE FROM recipe_ingredients WHERE recipe_id = $1",
 		recipe.ID,
@@ -267,7 +266,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		return nil, fmt.Errorf("deleting recipe ingredients: %w", db.HandlePgError(err))
 	}
 
-	err = repo.insertRecipeIngredients(ctx, executor, recipe.ID, recipe.Ingredients)
+	err = repo.insertRecipeIngredients(ctx, pgxDB, recipe.ID, recipe.Ingredients)
 	if err != nil {
 		return nil, fmt.Errorf("inserting recipe ingredients: %w", db.HandlePgError(err))
 	}
@@ -278,11 +277,11 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 }
 
 func (repo PgRecipesRepo) Delete(ctx context.Context, recipeID string) error {
-	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
+	pgxDB := db.GetPGXDB(ctx, repo.pgxDB)
 
 	sql := "DELETE FROM recipes WHERE id = $1;"
 
-	_, err := executor.Exec(ctx, sql, recipeID)
+	_, err := pgxDB.Exec(ctx, sql, recipeID)
 	if err != nil {
 		return fmt.Errorf("executing delete recipe query: %w", db.HandlePgError(err))
 	}
@@ -290,7 +289,7 @@ func (repo PgRecipesRepo) Delete(ctx context.Context, recipeID string) error {
 	return nil
 }
 
-func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor db.BatcherExecutorQuerier, recipeID uuid.UUID, ingredients []RecipeIngredient) error { //nolint:lll
+func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, pgxDB db.PGXDB, recipeID uuid.UUID, ingredients []RecipeIngredient) error { //nolint:lll
 	batch := &pgx.Batch{} //nolint: exhaustruct
 	recipeIngredientsQuery := `
     INSERT INTO
@@ -308,7 +307,7 @@ func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor 
 		})
 	}
 
-	batchResult := executor.SendBatch(ctx, batch)
+	batchResult := pgxDB.SendBatch(ctx, batch)
 	defer batchResult.Close()
 
 	for i := range batch.Len() {
@@ -322,7 +321,7 @@ func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, executor 
 }
 
 func (repo PgRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (string, error) {
-	executor := db.GetBatcherExecutorQuerier(ctx, repo.pool)
+	pgxDB := db.GetPGXDB(ctx, repo.pgxDB)
 
 	slug := slug.Make(title)
 
@@ -332,7 +331,7 @@ func (repo PgRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (stri
       OR slug ~ ($1 || '-[0-9]+$');
   `
 
-	rows, err := executor.Query(ctx, query, slug)
+	rows, err := pgxDB.Query(ctx, query, slug)
 	if err != nil {
 		return "", fmt.Errorf("querying existing slugs: %w", err)
 	}

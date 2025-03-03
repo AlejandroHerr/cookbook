@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlejandroHerr/cookbook/internal/common"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 var (
@@ -67,31 +66,12 @@ func (s *PgxTransaction) Transaction() any {
 	return s.tx
 }
 
-type Executor interface {
-	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
-}
-
-type Querier interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
-
-type Batcher interface {
-	SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults
-}
-
-type BatcherExecutorQuerier interface {
-	Executor
-	Querier
-	Batcher
-}
-
-func GetBatcherExecutorQuerier(ctx context.Context, beq BatcherExecutorQuerier) BatcherExecutorQuerier {
+func GetPGXDB(ctx context.Context, pgxDB PGXDB) PGXDB {
 	if session, ok := ctx.Value(common.TransactionContextKey{}).(*PgxTransaction); ok {
 		if tx, isTx := session.Transaction().(pgx.Tx); isTx {
 			return tx
 		}
 	}
 
-	return beq
+	return pgxDB
 }

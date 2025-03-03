@@ -58,7 +58,7 @@ func TestPgxTransactionManager(t *testing.T) {
 
 		require.Equal(t, mocks.mockTx, tx)
 
-		beq := db.GetBatcherExecutorQuerier(context.WithValue(context.Background(), common.TransactionContextKey{}, transaction), &pgx.Conn{})
+		beq := db.GetPGXDB(context.WithValue(context.Background(), common.TransactionContextKey{}, transaction), &pgx.Conn{})
 
 		require.Equal(t, mocks.mockTx, beq)
 
@@ -74,7 +74,7 @@ func TestPgxTransactionManager(t *testing.T) {
 			transaction, err := m.Begin(context.Background())
 			require.NoError(t, err)
 
-			beq := db.GetBatcherExecutorQuerier(context.WithValue(context.Background(), common.TransactionContextKey{}, transaction), &pgx.Conn{})
+			beq := db.GetPGXDB(context.WithValue(context.Background(), common.TransactionContextKey{}, transaction), &pgx.Conn{})
 
 			require.Equal(t, mocks.mockTx, beq)
 
@@ -83,10 +83,10 @@ func TestPgxTransactionManager(t *testing.T) {
 		t.Run("return fallback if there is no transaction in the context", func(t *testing.T) {
 			conn := &pgx.Conn{}
 
-			beq0 := db.GetBatcherExecutorQuerier(context.Background(), conn)
+			beq0 := db.GetPGXDB(context.Background(), conn)
 			require.Equal(t, conn, beq0)
 
-			beq1 := db.GetBatcherExecutorQuerier(
+			beq1 := db.GetPGXDB(
 				context.WithValue(context.Background(), common.TransactionContextKey{}, nil),
 				conn,
 			)
