@@ -7,62 +7,67 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-type ErrResponse struct {
+type ErrorResponse struct {
 	Err            error `json:"-"` // low-level runtime error
 	HTTPStatusCode int   `json:"-"` // http response status code
 
-	StatusText string `json:"status"` // user-level status message
-	// AppCode    int64  `json:"code,omitempty"`  // application-specific error code
-	ErrorText string `json:"error,omitempty"` // application-level error message, for debugging
+	StatusText string      `json:"status"`          // user-level status message
+	ErrorText  string      `json:"error,omitempty"` // application-level error message, for debugging
+	Details    interface{} `json:"details,omitempty"`
 }
 
-func (e *ErrResponse) Render(_ http.ResponseWriter, r *http.Request) error {
+func (e *ErrorResponse) Render(_ http.ResponseWriter, r *http.Request) error {
 	render.Status(r, e.HTTPStatusCode)
 	return nil
 }
 
-func ErrInternalServerError(err error) *ErrResponse {
-	return &ErrResponse{
+func InternalServerError(err error) *ErrorResponse {
+	return &ErrorResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusInternalServerError,
 		StatusText:     http.StatusText(http.StatusInternalServerError),
 		ErrorText:      err.Error(),
+		Details:        nil,
 	}
 }
 
-func ErrBadRequest(err error) *ErrResponse {
-	return &ErrResponse{
+func BadRequest(err error) *ErrorResponse {
+	return &ErrorResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusBadRequest,
 		StatusText:     http.StatusText(http.StatusBadRequest),
 		ErrorText:      err.Error(),
+		Details:        nil,
 	}
 }
 
-func ErrRender(err error) *ErrResponse {
-	return &ErrResponse{
+func ErrRender(err error) *ErrorResponse {
+	return &ErrorResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusUnprocessableEntity,
 		StatusText:     "Error rendering response.",
 		ErrorText:      err.Error(),
+		Details:        nil,
 	}
 }
 
-func ErrNotFound(resource string) *ErrResponse {
-	return &ErrResponse{
+func NotFound(resource string) *ErrorResponse {
+	return &ErrorResponse{
 		Err:            nil,
 		HTTPStatusCode: http.StatusNotFound,
 		StatusText:     http.StatusText(http.StatusNotFound),
 		ErrorText:      resource + " not found",
+		Details:        nil,
 	}
 }
 
-func ErrConflict(err error) *ErrResponse {
-	return &ErrResponse{
+func ErrConflict(err error) *ErrorResponse {
+	return &ErrorResponse{
 		Err:            err,
 		HTTPStatusCode: http.StatusConflict,
 		StatusText:     http.StatusText(http.StatusConflict),
 		ErrorText:      err.Error(),
+		Details:        nil,
 	}
 }
 
@@ -72,12 +77,7 @@ type ErrValidationDetail struct {
 	Path  string `json:"path"`
 }
 
-type ErrValidationResponse struct {
-	*ErrResponse
-	Details []ErrValidationDetail `json:"details"`
-}
-
-func NewErrValidationResponse(err validator.ValidationErrors) *ErrValidationResponse {
+func ValidationBarRequest(err validator.ValidationErrors) *ErrorResponse {
 	details := make([]ErrValidationDetail, 0, len(err))
 	for _, e := range err {
 		details = append(details, ErrValidationDetail{
@@ -87,13 +87,11 @@ func NewErrValidationResponse(err validator.ValidationErrors) *ErrValidationResp
 		})
 	}
 
-	return &ErrValidationResponse{
-		ErrResponse: &ErrResponse{
-			Err:            err,
-			HTTPStatusCode: http.StatusBadRequest,
-			StatusText:     http.StatusText(http.StatusBadRequest),
-			ErrorText:      "Invalid payload",
-		},
-		Details: details,
+	return &ErrorResponse{
+		Err:            err,
+		HTTPStatusCode: http.StatusBadRequest,
+		StatusText:     http.StatusText(http.StatusBadRequest),
+		ErrorText:      "Invalid payload",
+		Details:        details,
 	}
 }

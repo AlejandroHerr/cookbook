@@ -10,7 +10,7 @@ type CreateUpdateRecipeDTO struct {
 	Title       string                      `json:"title" validate:"required,min=1"`
 	URL         string                      `json:"url" validate:"omitempty,url,min=1"`
 	Tags        []string                    `json:"tags" validate:"omitempty,dive,min=1"`
-	Ingredients []CreateRecipeIngredientDTO `json:"ingredients" validate:"omitempty,required,dive,required"`
+	Ingredients []CreateRecipeIngredientDTO `json:"ingredients" validate:"omitempty,required,unique=Name,dive,required"`
 	Servings    uint                        `json:"servings" validate:"gte=1"`
 	Description string                      `json:"description" validate:"omitempty,min=1"`
 	Headline    string                      `json:"headline" validate:"omitempty,min=1"`

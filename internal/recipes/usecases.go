@@ -63,7 +63,7 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 	defer func() {
 		err = transaction.Rollback()
 		if err != nil {
-			u.logger.WarnContext(ctx, "error rolling back transaction", slog.Any("error", err))
+			u.logger.WarnContext(ctx, "rolling back transaction", slog.Any("error", err))
 		}
 	}()
 
@@ -107,7 +107,7 @@ func (u UseCases) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Reci
 
 	commitErr := transaction.Commit()
 	if commitErr != nil {
-		u.logger.ErrorContext(ctx, "error committing transaction", slog.Any("error", commitErr))
+		u.logger.ErrorContext(ctx, "committing transaction", slog.Any("error", commitErr))
 		return nil, fmt.Errorf("commit transaction: %w", commitErr)
 	}
 
@@ -144,7 +144,7 @@ func (u UseCases) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateR
 		if err != nil {
 			u.logger.WarnContext(
 				ctx,
-				"error rolling back transaction",
+				"rolling back transaction",
 				slog.Any("error", err),
 			)
 		}
@@ -195,7 +195,7 @@ func (u UseCases) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateR
 	if commitErr != nil {
 		u.logger.ErrorContext(
 			ctx,
-			"error committing transaction",
+			"committing transaction",
 			slog.Any("error", commitErr),
 		)
 		return nil, fmt.Errorf("commit transaction: %w", commitErr)

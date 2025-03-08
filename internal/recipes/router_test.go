@@ -47,7 +47,7 @@ func setupTestServer(t *testing.T) *testServer {
 	useCases := recipes.MakeUseCases(transactionManager, recipesRepo, ingredientsRepo, logger)
 
 	// Initialize handlers
-	recipesRouter := recipes.MakeRouter(useCases)
+	recipesRouter := recipes.MakeRouter(useCases, logger)
 
 	// Initialize router
 	r := chi.NewRouter()
@@ -85,9 +85,9 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusOK, resp.StatusCode, "should return status ok")
 
-				var fetched recipes.GetRecipesResponse
+				var fetched recipes.RecipesListResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
-				require.NoError(t, err, "shuld be a GetRecipesResponse")
+				require.NoError(t, err, "shuld be a RecipesListResponse")
 
 				dbRecipes, err := ts.recipesRepo.GetAll(context.Background())
 				require.NoError(t, err)
@@ -95,7 +95,7 @@ func TestRecipesRouter(t *testing.T) {
 				require.Equal(t, len(dbRecipes), len(fetched.Recipes), "should return the same number of recipes")
 
 				for i := range fetched.Recipes {
-					r := *fetched.Recipes[i].Recipe
+					r := fetched.Recipes[i]
 					RequireRecipeEqual(t, dbRecipes[i], r, RecipeEqualityOptions{}, "should be the recipe "+strconv.Itoa(i)+" in the db")
 				}
 			})
@@ -181,13 +181,13 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusBadRequest, resp.StatusCode, "should return a Bad Request Status")
 
-				var fetched api.ErrValidationResponse
+				var fetched api.ErrorResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be an ErrResponse")
 
 				_, err = ts.recipesRepo.GetBySlug(context.Background(), slug.Make(recipeDTO.Title))
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "should not create a recipe")
 			})
@@ -204,9 +204,9 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusOK, resp.StatusCode)
 
-				var fetched recipes.GetRecipeResponse
+				var fetched recipes.RecipeResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
-				require.NoError(t, err, "response should be a GetRecipeResponse")
+				require.NoError(t, err, "response should be a RecipeResponse")
 
 				dbRecipe, err := ts.recipesRepo.GetBySlug(context.Background(), recipeToFind.Slug)
 				require.NoError(t, err, "should not return an error")
@@ -222,7 +222,7 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusNotFound, resp.StatusCode)
 
-				var fetched api.ErrResponse
+				var fetched api.ErrorResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be an api.ErrResponse")
 
@@ -242,9 +242,9 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusOK, resp.StatusCode)
 
-				var fetched recipes.GetRecipeResponse
+				var fetched recipes.RecipeResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
-				require.NoError(t, err, "response should be a GetRecipeResponse")
+				require.NoError(t, err, "response should be a RecipeResponse")
 
 				dbRecipe, err := ts.recipesRepo.GetByID(context.Background(), recipeToFind.ID.String())
 				require.NoError(t, err, "should not return an error")
@@ -260,7 +260,7 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusNotFound, resp.StatusCode)
 
-				var fetched api.ErrResponse
+				var fetched api.ErrorResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be an api.ErrResponse")
 
@@ -290,9 +290,9 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusOK, resp.StatusCode, "should return status ok")
 
-				var fetched recipes.CreateRecipeResponse
+				var fetched recipes.RecipeResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
-				require.NoError(t, err, "response should be a CreateRecipeResponse")
+				require.NoError(t, err, "response should be a RecipeResponse")
 
 				expectedRecipe := recipes.Recipe{ //nolint:exhaustruct
 					ID:          recipeToUpdate.ID,
@@ -327,6 +327,35 @@ func TestRecipesRouter(t *testing.T) {
 
 				RequireRecipeEqual(t, *fetched.Recipe, *dbRecipe, RecipeEqualityOptions{}, "fetched recipe should be equal to the one in the db")
 			})
+			t.Run("returns a Not Found Error when the recipe does not exist", func(t *testing.T) {
+				recipeToUpdateID := uuid.New()
+
+				var recipeDTO recipes.CreateUpdateRecipeDTO
+
+				testutil.MustMakeStructFixture(&recipeDTO)
+
+				jsonBody, err := json.Marshal(recipeDTO)
+				require.NoError(t, err, "error marshaling recipeDTO")
+
+				req, err := http.NewRequest(http.MethodPut, ts.server.URL+"/recipes/"+recipeToUpdateID.String(), bytes.NewBuffer(jsonBody))
+				require.NoError(t, err, "error creating request")
+				req.Header.Set("Content-Type", "application/json")
+
+				resp, err := http.DefaultClient.Do(req)
+				require.NoError(t, err, "request should not fail")
+
+				defer resp.Body.Close()
+
+				require.Equal(t, http.StatusNotFound, resp.StatusCode)
+
+				var fetched api.ErrorResponse
+				err = json.NewDecoder(resp.Body).Decode(&fetched)
+				require.NoError(t, err, "response should be an api.ErrResponse")
+
+				require.Equal(t, http.StatusText(http.StatusNotFound), fetched.StatusText, "status text should inform about not found")
+				require.Equal(t, "recipe not found", fetched.ErrorText, "error text should inform about not found")
+			})
+
 			t.Run("return a Bad Request Status if data is invalid", func(t *testing.T) {
 				recipeToUpdate := fixtures[10]
 
@@ -350,13 +379,13 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusBadRequest, resp.StatusCode, "should return a Bad Request Status")
 
-				var fetched api.ErrValidationResponse
+				var fetched api.ErrorResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be an ErrResponse")
 
 				_, err = ts.recipesRepo.GetBySlug(context.Background(), slug.Make(recipeDTO.Title))
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "should not create a recipe")
 			})
@@ -376,7 +405,7 @@ func TestRecipesRouter(t *testing.T) {
 
 				_, err = ts.recipesRepo.GetByID(context.Background(), recipeToDeleteID.String())
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "should not find the recipe after deleting")
 			})
@@ -391,7 +420,7 @@ func TestRecipesRouter(t *testing.T) {
 
 				require.Equal(t, http.StatusNotFound, resp.StatusCode)
 
-				var fetched api.ErrResponse
+				var fetched api.ErrorResponse
 				err = json.NewDecoder(resp.Body).Decode(&fetched)
 				require.NoError(t, err, "response should be an api.ErrResponse")
 

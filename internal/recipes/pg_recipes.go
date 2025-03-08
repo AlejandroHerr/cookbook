@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlejandroHerr/cookbook/internal/common"
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -32,7 +33,7 @@ func (repo PgRecipesRepo) GetAll(ctx context.Context) ([]Recipe, error) {
 
 	rows, err := repo.pgxDB.Query(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("quering recipes: %w", db.HandlePgError(err))
+		return nil, fmt.Errorf("quering recipes: %w", &common.UnexpectedError{Err: err})
 	}
 	defer rows.Close()
 
@@ -101,7 +102,7 @@ func (repo PgRecipesRepo) get(ctx context.Context, field string, value string) (
 		&recipe.CreatedAt,
 		&recipe.UpdatedAt,
 	); err != nil {
-		return nil, fmt.Errorf("scaning recipe %s=%s: %w", field, value, db.HandlePgError(err))
+		return nil, fmt.Errorf("scaning recipe %s=%s: %w", field, value, db.HandleScanError(err))
 	}
 
 	ingredients, err := repo.getRecipeIngredients(ctx, recipe.ID)
@@ -127,7 +128,7 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
 
 	rows, err := repo.pgxDB.Query(ctx, query, recipeID)
 	if err != nil {
-		return nil, fmt.Errorf("querying recipe_ingredients: %w", err)
+		return nil, fmt.Errorf("querying recipe_ingredients: %w", &common.UnexpectedError{Err: err})
 	}
 	defer rows.Close()
 
@@ -138,7 +139,7 @@ func (repo PgRecipesRepo) getRecipeIngredients(ctx context.Context, recipeID uui
 
 		err = rows.Scan(&ri.ID, &ri.Name, &ri.Kind, &ri.Unit, &ri.Quantity)
 		if err != nil {
-			return nil, fmt.Errorf("scanning recipe_ingredients row: %w", err)
+			return nil, fmt.Errorf("scanning recipe_ingredients row: %w", &common.UnexpectedError{Err: err})
 		}
 
 		ingredients = append(ingredients, ri)
@@ -188,12 +189,12 @@ func (repo PgRecipesRepo) Create(ctx context.Context, recipe Recipe) (*Recipe, e
 		&createdRecipe.CreatedAt,
 		&createdRecipe.UpdatedAt,
 	); err != nil {
-		return nil, fmt.Errorf("executing insert recipe query: %w", db.HandlePgError(err))
+		return nil, fmt.Errorf("executing insert recipe query: %w", db.HandleExecError(err))
 	}
 
 	err := repo.insertRecipeIngredients(ctx, pgxDB, recipe.ID, recipe.Ingredients)
 	if err != nil {
-		return nil, fmt.Errorf("inserting recipe ingredients: %w", db.HandlePgError(err))
+		return nil, fmt.Errorf("inserting recipe ingredients: %w", err)
 	}
 
 	createdRecipe.Ingredients = recipe.Ingredients
@@ -254,7 +255,7 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		&updatedRecipe.CreatedAt,
 		&updatedRecipe.UpdatedAt,
 	); err != nil {
-		return nil, fmt.Errorf("executing update recipe query: %w", db.HandlePgError(err))
+		return nil, fmt.Errorf("executing update recipe query: %w", db.HandleExecError(err))
 	}
 
 	_, err := pgxDB.Exec(
@@ -263,12 +264,12 @@ func (repo PgRecipesRepo) Update(ctx context.Context, recipe Recipe) (*Recipe, e
 		recipe.ID,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("deleting recipe ingredients: %w", db.HandlePgError(err))
+		return nil, fmt.Errorf("deleting recipe ingredients: %w", &common.UnexpectedError{Err: err})
 	}
 
 	err = repo.insertRecipeIngredients(ctx, pgxDB, recipe.ID, recipe.Ingredients)
 	if err != nil {
-		return nil, fmt.Errorf("inserting recipe ingredients: %w", db.HandlePgError(err))
+		return nil, fmt.Errorf("inserting recipe ingredients: %w", err)
 	}
 
 	updatedRecipe.Ingredients = recipe.Ingredients
@@ -283,7 +284,7 @@ func (repo PgRecipesRepo) Delete(ctx context.Context, recipeID string) error {
 
 	_, err := pgxDB.Exec(ctx, sql, recipeID)
 	if err != nil {
-		return fmt.Errorf("executing delete recipe query: %w", db.HandlePgError(err))
+		return fmt.Errorf("executing delete recipe query: %w", db.HandleExecError(err))
 	}
 
 	return nil
@@ -313,7 +314,7 @@ func (repo PgRecipesRepo) insertRecipeIngredients(ctx context.Context, pgxDB db.
 	for i := range batch.Len() {
 		_, err := batchResult.Exec()
 		if err != nil {
-			return fmt.Errorf("error executing batched query at index %d: %w", i, err)
+			return fmt.Errorf("executing batched query at index %d: %w", i, &common.UnexpectedError{Err: err})
 		}
 	}
 
@@ -333,7 +334,7 @@ func (repo PgRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (stri
 
 	rows, err := pgxDB.Query(ctx, query, slug)
 	if err != nil {
-		return "", fmt.Errorf("querying existing slugs: %w", err)
+		return "", fmt.Errorf("querying existing slugs: %w", &common.UnexpectedError{Err: err})
 	}
 
 	existingSlugs := make(map[string]bool)
@@ -341,7 +342,7 @@ func (repo PgRecipesRepo) GetUniqueSlug(ctx context.Context, title string) (stri
 	for rows.Next() {
 		var existingSlug string
 		if err = rows.Scan(&existingSlug); err != nil {
-			return "", fmt.Errorf("scanning existing slug: %w", err)
+			return "", fmt.Errorf("scanning existing slug: %w", &common.UnexpectedError{Err: err})
 		}
 
 		existingSlugs[existingSlug] = true

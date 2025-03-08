@@ -1,6 +1,8 @@
 package completions
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/AlejandroHerr/cookbook/internal/common/api"
@@ -9,38 +11,34 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func MakeRouter(useCases *UseCases) http.Handler {
+func MakeRouter(useCases *UseCases, logger *slog.Logger) http.Handler {
+	l := logger.With(slog.String("service", "completions-router"))
 	r := chi.NewRouter()
 
-	r.Post("/recipe", completeRecipeHandler(useCases))
+	r.Post("/recipe", api.HandleRendererFunc(completeRecipeHandler(useCases), l))
 
 	return r
 }
 
-func completeRecipeHandler(useCases *UseCases) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func completeRecipeHandler(useCases *UseCases) api.RendererFunc {
+	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
 		request := &CompleteRecipeRequest{} //nolint:exhaustruct
 		if err := render.Bind(r, request); err != nil {
-			if validationErrors, is := err.(validator.ValidationErrors); is {
-				render.Render(w, r, api.NewErrValidationResponse(validationErrors)) //nolint: errcheck
-				return
+			var validationErrors *validator.ValidationErrors
+			if as := errors.As(err, &validationErrors); as {
+				return api.ValidationBarRequest(*validationErrors)
 			}
 
-			render.Render(w, r, api.ErrBadRequest(err)) //nolint: errcheck
+			return api.BadRequest(err)
 
-			return
 		}
 
 		recipe, err := useCases.CompleteRecipe(r.Context(), request.URL)
 		if err != nil {
-			render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
-			return
+			return api.InternalServerError(err)
 		}
 
-		if err = render.Render(w, r, &CompleteRecipeResponse{Recipe: *recipe}); err != nil {
-			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
-			return
-		}
+		return &CompleteRecipeResponse{Recipe: *recipe}
 	}
 }
 

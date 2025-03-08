@@ -1,6 +1,7 @@
 package suggestions
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/AlejandroHerr/cookbook/internal/common/api"
@@ -8,17 +9,18 @@ import (
 	"github.com/go-chi/render"
 )
 
-func MakeRouter(useCases *UseCases) chi.Router {
+func MakeRouter(useCases *UseCases, logger *slog.Logger) chi.Router {
+	l := logger.With(slog.String("service", "suggestions-router"))
 	r := chi.NewRouter()
 
-	r.Get("/ingredients", getOptionsHander(useCases, "ingredients"))
-	r.Get("/tags", getOptionsHander(useCases, "tags"))
+	r.Get("/ingredients", getOptionsHander(useCases, "ingredients", l))
+	r.Get("/tags", getOptionsHander(useCases, "tags", l))
 
 	return r
 }
 
-func getOptionsHander(useCases *UseCases, entity string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func getOptionsHander(useCases *UseCases, entity string, logger *slog.Logger) http.HandlerFunc {
+	return api.HandleRendererFunc(func(w http.ResponseWriter, r *http.Request) render.Renderer {
 		search := r.URL.Query().Get("search")
 
 		var options []Option
@@ -31,21 +33,16 @@ func getOptionsHander(useCases *UseCases, entity string) http.HandlerFunc {
 		case "tags":
 			options, err = useCases.GetTagsOptions(r.Context(), search)
 		default:
-			render.Render(w, r, api.ErrNotFound(entity+" options")) //nolint: errcheck
+			return api.NotFound(entity + " options")
 
-			return
 		}
 
 		if err != nil {
-			render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
-			return
+			return api.InternalServerError(err)
 		}
 
-		if err = render.Render(w, r, &GetSuggestionsReponse{Options: options}); err != nil {
-			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
-			return
-		}
-	}
+		return &GetSuggestionsReponse{Options: options}
+	}, logger)
 }
 
 type GetSuggestionsReponse struct {

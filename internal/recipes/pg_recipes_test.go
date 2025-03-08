@@ -50,7 +50,7 @@ func TestPgRecipesRepository(t *testing.T) {
 			t.Run("When recipe does not exists it returns an error", func(t *testing.T) {
 				_, err := repo.GetByID(context.Background(), uuid.NewString())
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "error should be ErrNotFound")
 			})
@@ -65,7 +65,7 @@ func TestPgRecipesRepository(t *testing.T) {
 			t.Run("When recipe does not exists it returns an error", func(t *testing.T) {
 				_, err := repo.GetBySlug(context.Background(), "not-found")
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "error should be ErrNotFound")
 			})
@@ -101,26 +101,37 @@ func TestPgRecipesRepository(t *testing.T) {
 				recipe.ID = uuid.New()
 				_, err := repo.Create(context.Background(), recipe)
 
-				var errDuplicatedKey *common.ErrDuplicateKey
+				var errDuplicatedKey *common.DuplicateError
 
 				require.ErrorAs(t, err, &errDuplicatedKey, "should fail with ErrDuplicateKey")
 
 				_, err = repo.GetByID(context.Background(), recipe.ID.String())
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "should not have created the recipe")
 			})
-			t.Run("fails if the recipe is duplicated2", func(t *testing.T) {
+			t.Run("fails if ingredient does not exists", func(t *testing.T) {
 				recipe := recipes.Recipe{}
 				testutil.MustMakeStructFixture(&recipe)
 
 				recipe.Ingredients[0].ID = uuid.New()
 				_, err := repo.Create(context.Background(), recipe)
 
-				var errCoinstrain *common.ErrConstrain
+				var errUnexpected *common.UnexpectedError
 
-				require.ErrorAs(t, err, &errCoinstrain, "should fail with ErrDuplicateKey")
+				require.ErrorAs(t, err, &errUnexpected, "should fail with UnexpectedError")
+			})
+			t.Run("fails if ingredient is duplicated", func(t *testing.T) {
+				recipe := recipes.Recipe{}
+				testutil.MustMakeStructFixture(&recipe)
+
+				recipe.Ingredients = append(recipe.Ingredients, recipe.Ingredients[0])
+				_, err := repo.Create(context.Background(), recipe)
+
+				var errUnexpected *common.UnexpectedError
+
+				require.ErrorAs(t, err, &errUnexpected, "should fail with UnexpectedError")
 			})
 		})
 		t.Run("Update", func(t *testing.T) {
@@ -151,16 +162,16 @@ func TestPgRecipesRepository(t *testing.T) {
 				require.NoError(t, err, "error should be nil")
 				RequireRecipeEqual(t, *updated, *dbRecipe, RecipeEqualityOptions{}, "recipe should be updated in the db")
 			})
-			t.Run("return ErrConstrain if the ingredients do not exist", func(t *testing.T) {
+			t.Run("fails if ingredient does not exists", func(t *testing.T) {
 				recipe := new(recipes.Recipe)
 				testutil.MustMakeStructFixture(recipe)
 				recipe.ID = fixtures[1].ID
 
 				_, err := repo.Update(context.Background(), *recipe)
 
-				var errConstrain *common.ErrConstrain
+				var errUnexpected *common.UnexpectedError
 
-				require.ErrorAs(t, err, &errConstrain, "error should be ErrConstrain")
+				require.ErrorAs(t, err, &errUnexpected, "error should be UnexpectedError")
 			})
 			t.Run("returns ErrNotFound if recipe does not exist", func(t *testing.T) {
 				recipe := new(recipes.Recipe)
@@ -168,7 +179,7 @@ func TestPgRecipesRepository(t *testing.T) {
 
 				_, err := repo.Update(context.Background(), *recipe)
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "error should be ErrNotFound")
 			})
@@ -181,7 +192,7 @@ func TestPgRecipesRepository(t *testing.T) {
 
 				_, err = repo.GetByID(context.Background(), fixtures[9].ID.String())
 
-				var errNotFound *common.ErrNotFound
+				var errNotFound *common.NotFoundError
 
 				require.ErrorAs(t, err, &errNotFound, "should not find the recipe after deleting")
 			})

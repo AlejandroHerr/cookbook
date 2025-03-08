@@ -21,8 +21,9 @@ func TestRouter(t *testing.T) {
 	cache := new(completions.MockCache)
 	scrapper := new(completions.MockScrapper)
 	aiService := new(completions.MockAIService)
-	useCases := completions.MakeUseCases(cache, scrapper, aiService, logger.NewTestLogger())
-	router := completions.MakeRouter(useCases)
+	logger := logger.NewTestLogger()
+	useCases := completions.MakeUseCases(cache, scrapper, aiService, logger)
+	router := completions.MakeRouter(useCases, logger)
 
 	r := chi.NewRouter()
 	r.Mount("/completions", router)

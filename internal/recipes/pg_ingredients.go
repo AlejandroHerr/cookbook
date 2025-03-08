@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlejandroHerr/cookbook/internal/common"
 	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
 )
 
@@ -37,7 +38,7 @@ func (repo PgIngredientsRepo) UpsertMany(ctx context.Context, ingredients []Crea
 
 		err := row.Scan(&recipeIngredients[i].ID, &recipeIngredients[i].Name, &recipeIngredients[i].Kind)
 		if err != nil {
-			return nil, fmt.Errorf("scanning ingredient name=%s: %w", ingredient.Name, db.HandlePgError(err))
+			return nil, fmt.Errorf("scanning ingredient name=%s: %w", ingredient.Name, &common.UnexpectedError{Err: err})
 		}
 
 		recipeIngredients[i].Quantity = ingredient.Quantity

@@ -3,6 +3,7 @@ package recipes
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -13,74 +14,56 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func MakeRouter(useCases *UseCases) chi.Router {
+func MakeRouter(useCases *UseCases, logger *slog.Logger) chi.Router {
+	l := logger.With(slog.String("service", "recipes-router"))
 	r := chi.NewRouter()
 
-	r.Get("/", getAllRecipesHandler(useCases))
-	r.Post("/", createRecipeHandler(useCases))
+	r.Get("/", api.HandleRendererFunc(getAllRecipesHandler(useCases), l))
+	r.Post("/", api.HandleRendererFunc(createRecipeHandler(useCases), l))
 	r.Route("/{recipeIDSlug}", func(r chi.Router) {
 		r.Use(recipeCtx(useCases))
-		r.Get("/", getRecipeHandler)
-		r.Put("/", updateRecipeHandler(useCases))
-		r.Delete("/", deleteRecipeHandler(useCases))
+		r.Get("/", api.HandleRendererFunc(getRecipeHandler, l))
+		r.Put("/", api.HandleRendererFunc(updateRecipeHandler(useCases), l))
+		r.Delete("/", api.HandleRendererFunc(deleteRecipeHandler(useCases), l))
 	})
-	//
+
 	return r
 }
 
-func getAllRecipesHandler(useCases *UseCases) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func getAllRecipesHandler(useCases *UseCases) api.RendererFunc {
+	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
 		list, err := useCases.GetAll(r.Context())
 		if err != nil {
-			render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
-			return
+			return api.InternalServerError(err)
 		}
 
-		if err = render.Render(w, r, MakeGetRecipesResponse(list)); err != nil {
-			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
-			return
-		}
+		return newRecipesListResponse(list)
 	}
 }
 
-func createRecipeHandler(useCases *UseCases) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		request := makeCreateUpdateRecipeRequest()
+func createRecipeHandler(useCases *UseCases) api.RendererFunc {
+	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
+		request := newCreateUpdateRecipeRequest()
 		if err := render.Bind(r, request); err != nil {
-			if validationErrors, is := err.(validator.ValidationErrors); is {
-				render.Render(w, r, api.NewErrValidationResponse(validationErrors)) //nolint: errcheck
-				return
+			var validationErrors *validator.ValidationErrors
+			if as := errors.As(err, &validationErrors); as {
+				return api.ValidationBarRequest(*validationErrors)
 			}
 
-			render.Render(w, r, api.ErrBadRequest(err)) //nolint: errcheck
-
-			return
+			return api.BadRequest(err)
 		}
 
 		recipe, err := useCases.Create(r.Context(), request.CreateUpdateRecipeDTO)
 		if err != nil {
-			var duplicateErr *common.ErrDuplicateKey
-
+			var duplicateErr *common.DuplicateError
 			if as := errors.As(err, &duplicateErr); as {
-				render.Render(w, r, &api.ErrResponse{ //nolint: errcheck
-					Err:            err,
-					HTTPStatusCode: http.StatusConflict,
-					StatusText:     http.StatusText(http.StatusConflict),
-					ErrorText:      err.Error(),
-				})
-
-				return
+				return api.ErrConflict(err)
 			}
 
-			render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
-
-			return
+			return api.InternalServerError(err)
 		}
 
-		if err = render.Render(w, r, makeCreateRecipeResponse(recipe)); err != nil {
-			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
-			return
-		}
+		return newCreateRecipeResponse(recipe)
 	}
 }
 
@@ -93,13 +76,13 @@ func recipeCtx(useCases *UseCases) func(http.Handler) http.Handler {
 
 			recipe, err := useCases.Get(r.Context(), recipeIDSlug)
 			if err != nil {
-				var notFoundErr *common.ErrNotFound
+				var notFoundErr *common.NotFoundError
 				if is := errors.As(err, &notFoundErr); is {
-					render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
+					render.Render(w, r, api.NotFound("recipe")) //nolint: errcheck
 					return
 				}
 
-				render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
+				render.Render(w, r, api.InternalServerError(err)) //nolint: errcheck
 
 				return
 			}
@@ -110,81 +93,59 @@ func recipeCtx(useCases *UseCases) func(http.Handler) http.Handler {
 	}
 }
 
-func getRecipeHandler(w http.ResponseWriter, r *http.Request) {
+func getRecipeHandler(w http.ResponseWriter, r *http.Request) render.Renderer {
 	recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 	if !ok {
-		render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
-		return
+		return api.NotFound("recipe")
 	}
 
-	if err := render.Render(w, r, makeGetRecipeResponse(recipe)); err != nil {
-		render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
-		return
-	}
+	return newRecipeResponse(recipe)
 }
 
-func updateRecipeHandler(useCases *UseCases) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func updateRecipeHandler(useCases *UseCases) api.RendererFunc {
+	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
 		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 		if !ok {
-			render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
-			return
+			return api.NotFound("recipe")
 		}
 
-		request := makeCreateUpdateRecipeRequest()
+		request := newCreateUpdateRecipeRequest()
 		if err := render.Bind(r, request); err != nil {
-			if validationErrors, is := err.(validator.ValidationErrors); is {
-				render.Render(w, r, api.NewErrValidationResponse(validationErrors)) //nolint: errcheck
-				return
+			var validationErrors *validator.ValidationErrors
+			if as := errors.As(err, &validationErrors); as {
+				return api.ValidationBarRequest(*validationErrors)
 			}
 
-			render.Render(w, r, api.ErrBadRequest(err)) //nolint: errcheck
-
-			return
+			return api.BadRequest(err)
 		}
 
 		recipe, err := useCases.Update(r.Context(), recipe, request.CreateUpdateRecipeDTO)
 		if err != nil {
-			var duplicateErr *common.ErrDuplicateKey
-
+			var duplicateErr *common.DuplicateError
 			if as := errors.As(err, &duplicateErr); as {
-				render.Render(w, r, &api.ErrResponse{ //nolint: errcheck
-					Err:            err,
-					HTTPStatusCode: http.StatusConflict,
-					StatusText:     http.StatusText(http.StatusConflict),
-					ErrorText:      "duplicated key '" + duplicateErr.Key + "' found updating recipe.",
-				})
-
-				return
+				return api.ErrConflict(err)
 			}
 
-			render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
-
-			return
+			return api.InternalServerError(err)
 		}
 
-		if err = render.Render(w, r, makeUpdateUpdateRecipeResponse(recipe)); err != nil {
-			render.Render(w, r, api.ErrRender(err)) //nolint: errcheck
-			return
-		}
+		return newRecipeResponse(recipe)
 	}
 }
 
-func deleteRecipeHandler(useCases *UseCases) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func deleteRecipeHandler(useCases *UseCases) api.RendererFunc {
+	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
 		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 		if !ok {
-			render.Render(w, r, api.ErrNotFound("recipe")) //nolint: errcheck
-			return
+			return api.NotFound("recipe")
 		}
 
 		err := useCases.Delete(r.Context(), recipe.ID.String())
 		if err != nil {
-			render.Render(w, r, api.ErrInternalServerError(err)) //nolint: errcheck
-			return
+			return api.InternalServerError(err)
 		}
 
-		w.WriteHeader(http.StatusNoContent)
+		return &api.NoContentResponse{}
 	}
 }
 
@@ -206,44 +167,31 @@ func Validator() *validator.Validate {
 	return validate
 }
 
-type RecipeResponse struct {
-	*Recipe
-}
-
-type GetRecipesResponse struct {
-	Recipes []GetRecipeResponse `json:"recipes" tstype:",required"`
-}
-
-func (res GetRecipesResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
-	return nil
-}
-
-func MakeGetRecipesResponse(recipes []Recipe) *GetRecipesResponse {
-	list := []GetRecipeResponse{}
-	for _, r := range recipes {
-		list = append(list, GetRecipeResponse{
-			Recipe: &r,
-		})
-	}
-
-	return &GetRecipesResponse{Recipes: list}
-}
-
 type CreateUpdateRecipeRequest struct {
-	*CreateUpdateRecipeDTO `tstype:",extends,required"`
+	*CreateUpdateRecipeDTO
 }
 
-func makeCreateUpdateRecipeRequest() *CreateUpdateRecipeRequest {
-	return &CreateUpdateRecipeRequest{
-		CreateUpdateRecipeDTO: &CreateUpdateRecipeDTO{}, //nolint:exhaustruct
-	}
+func newCreateUpdateRecipeRequest() *CreateUpdateRecipeRequest {
+	return &CreateUpdateRecipeRequest{CreateUpdateRecipeDTO: &CreateUpdateRecipeDTO{}}
 }
 
 func (req CreateUpdateRecipeRequest) Bind(_ *http.Request) error {
-	if err := Validator().Struct(req); err != nil {
-		return err //nolint:wrapcheck
+	if err := Validator().Struct(req.CreateUpdateRecipeDTO); err != nil {
+		return err
 	}
 
+	return nil
+}
+
+type RecipesListResponse struct {
+	Recipes []Recipe `json:"recipes" tstype:",required"`
+}
+
+func newRecipesListResponse(recipes []Recipe) *RecipesListResponse {
+	return &RecipesListResponse{Recipes: recipes}
+}
+
+func (res RecipesListResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
@@ -251,7 +199,7 @@ type CreateRecipeResponse struct {
 	*Recipe `tstype:",extends,required"`
 }
 
-func makeCreateRecipeResponse(recipe *Recipe) *CreateRecipeResponse {
+func newCreateRecipeResponse(recipe *Recipe) *CreateRecipeResponse {
 	return &CreateRecipeResponse{
 		Recipe: recipe,
 	}
@@ -263,32 +211,40 @@ func (res CreateRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) e
 	return nil
 }
 
-type GetRecipeResponse struct {
-	*Recipe `tstype:",extends,required"`
+type RecipeResponse struct {
+	*Recipe
 }
 
-func makeGetRecipeResponse(recipe *Recipe) *GetRecipeResponse {
-	return &GetRecipeResponse{
+func newRecipeResponse(recipe *Recipe) *RecipeResponse {
+	return &RecipeResponse{
 		Recipe: recipe,
 	}
 }
 
-func (res GetRecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
+func (res RecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
-type UpdateRecipeResponse struct {
-	*Recipe `tstype:",extends,required"`
+type CreatedRecipeResponse struct {
+	*Recipe
 }
 
-func makeUpdateUpdateRecipeResponse(recipe *Recipe) *UpdateRecipeResponse {
-	return &UpdateRecipeResponse{
+func makeCreatedRecipeResponse(recipe *Recipe) *CreatedRecipeResponse {
+	return &CreatedRecipeResponse{
 		Recipe: recipe,
 	}
 }
 
-func (res UpdateRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) error {
-	w.WriteHeader(http.StatusOK)
+func (res CreatedRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) error {
+	w.WriteHeader(http.StatusCreated)
+
+	return nil
+}
+
+type DeleteRecipeResponse struct{}
+
+func (res DeleteRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) error {
+	w.WriteHeader(http.StatusNoContent)
 
 	return nil
 }

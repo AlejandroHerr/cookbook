@@ -3,47 +3,39 @@ package common
 import "fmt"
 
 type (
-	ErrNotFound struct {
+	NotFoundError struct {
 		Err error
 	}
-	ErrTooManyRows struct {
-		Err error
+	DuplicateError struct {
+		Err    error
+		Entity string
+		Key    string
 	}
-	ErrDuplicateKey struct {
-		Err error
-		Key string
-	}
-	ErrConstrain struct {
+	ConstrainError struct {
 		Err        error
 		Constraint string
 	}
-
-	ErrUnexpected struct {
+	UnexpectedError struct {
 		Err error
 	}
 )
 
-func (e *ErrNotFound) Error() string {
+func (e *NotFoundError) Error() string {
 	return fmt.Sprintf("not found: %v", e.Err)
 }
-func (e *ErrNotFound) Unwrap() error { return e.Err }
+func (e *NotFoundError) Unwrap() error { return e.Err }
 
-func (e *ErrTooManyRows) Error() string {
+func (e *UnexpectedError) Error() string {
 	return fmt.Sprintf("too many rows: %v", e.Err)
 }
-func (e *ErrTooManyRows) Unwrap() error { return e.Err }
+func (e *UnexpectedError) Unwrap() error { return e.Err }
 
-func (e *ErrUnexpected) Error() string {
-	return fmt.Sprintf("too many rows: %v", e.Err)
+func (e *DuplicateError) Error() string {
+	return fmt.Sprintf("duplicate key for %s: %v", e.Key, e.Err)
 }
-func (e *ErrUnexpected) Unwrap() error { return e.Err }
+func (e *DuplicateError) Unwrap() error { return e.Err }
 
-func (e *ErrDuplicateKey) Error() string {
-	return fmt.Sprintf("duplicate key violation for %s: %v", e.Key, e.Err)
-}
-func (e *ErrDuplicateKey) Unwrap() error { return e.Err }
-
-func (e *ErrConstrain) Error() string {
+func (e *ConstrainError) Error() string {
 	return fmt.Sprintf("constraint violation for %s: %v", e.Constraint, e.Err)
 }
-func (e *ErrConstrain) Unwrap() error { return e.Err }
+func (e *ConstrainError) Unwrap() error { return e.Err }
