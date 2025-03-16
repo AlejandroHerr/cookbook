@@ -78,7 +78,7 @@ type RecipeIngredient struct {
 func (ri RecipeIngredient) Fake(faker *gofakeit.Faker) (any, error) {
 	name := gofakeit.AdjectiveDescriptive() + " " + gofakeit.AdjectiveDescriptive() + " " + gofakeit.NounConcrete()
 	kind := faker.Adjective()
-	unit := faker.RandomString([]string{"g", "kg", "ml", "l", "tsp", "tbsp", "cup", "qt", "countable", "uncountable"})
+	unit := faker.RandomString(Units)
 	quantity := faker.Float64Range(0.1, 1000)
 
 	return RecipeIngredient{

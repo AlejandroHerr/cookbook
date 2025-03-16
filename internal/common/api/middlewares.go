@@ -41,7 +41,10 @@ func RequestLoggerMiddleware(logger *slog.Logger) func(http.Handler) http.Handle
 			// Create a response writer wrapper to capture status and size
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-			requestID := r.Context().Value(RequestIDContextKey{}).(string)
+			requestID, ok := r.Context().Value(RequestIDContextKey{}).(string)
+			if !ok {
+				requestID = "unknown"
+			}
 
 			reqLogger := logger.With(
 				slog.String("request_id", requestID),

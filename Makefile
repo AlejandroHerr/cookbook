@@ -6,8 +6,8 @@ live/rest-api:
 live/frontend:
 	cd frontend && npm run dev
 
-generate/types:
-	tygo generate
+generate/sql:
+	sqlc generate
 
 db/up:
 	set -a; source .env; set +a; \
@@ -31,11 +31,9 @@ lint/rest-api:
 test/rest-api:
 	set -a; source .env.test; set +a; \
 		gotestsum 
-
 test/rest-api/watch:
 	set -a; source .env.test; set +a; \
 		gotestsum --watch
-
 test/db/up:
 	source .env.test && docker compose --env-file .env.test -p cookbook-test up db -d
 test/db/migration/up:

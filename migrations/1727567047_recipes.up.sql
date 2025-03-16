@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   prep_time INTEGER,
   url VARCHAR (255),
   tags TEXT[],
-  slug TEXT,
+  slug TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -52,3 +52,12 @@ CREATE TABLE IF NOT EXISTS recipe_ingredients (
   quantity FLOAT NOT NULL,
   PRIMARY KEY (recipe_id, ingredient_id)
 );
+
+CREATE OR REPLACE VIEW recipe_tags AS
+SELECT
+  recipes.id AS recipe_id,
+  unnest(recipes.tags) AS tag
+FROM
+  recipes
+WHERE
+  recipes.tags IS NOT NULL;

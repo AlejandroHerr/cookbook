@@ -11,30 +11,34 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func MakeRouter(useCases *UseCases, logger *slog.Logger) http.Handler {
-	l := logger.With(slog.String("service", "completions-router"))
+func NewRouter(service *Service, logger *slog.Logger) http.Handler {
 	r := chi.NewRouter()
 
-	r.Post("/recipe", api.HandleRendererFunc(completeRecipeHandler(useCases), l))
+	r.Post("/recipe", api.HandleRendererFunc(completeRecipeHandler(service, logger), logger))
 
 	return r
 }
 
-func completeRecipeHandler(useCases *UseCases) api.RendererFunc {
-	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
+func completeRecipeHandler(service *Service, logger *slog.Logger) api.RendererFunc {
+	return func(_ http.ResponseWriter, r *http.Request) render.Renderer {
 		request := &CompleteRecipeRequest{} //nolint:exhaustruct
 		if err := render.Bind(r, request); err != nil {
 			var validationErrors *validator.ValidationErrors
 			if as := errors.As(err, &validationErrors); as {
-				return api.ValidationBarRequest(*validationErrors)
+				logger.WarnContext(r.Context(), "request validation failed", slog.Any("error", err))
+
+				return api.ValidationBadRequest(*validationErrors)
 			}
 
-			return api.BadRequest(err)
+			logger.ErrorContext(r.Context(), "bind request failed", slog.Any("error", err))
 
+			return api.BadRequest(err)
 		}
 
-		recipe, err := useCases.CompleteRecipe(r.Context(), request.URL)
+		recipe, err := service.CompleteRecipe(r.Context(), request.URL)
 		if err != nil {
+			logger.ErrorContext(r.Context(), "complete recipe failed", slog.Any("error", err))
+
 			return api.InternalServerError(err)
 		}
 

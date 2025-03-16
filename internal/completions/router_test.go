@@ -2,7 +2,6 @@ package completions_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/AlejandroHerr/cookbook/internal/common/logger"
 	"github.com/AlejandroHerr/cookbook/internal/completions"
+	"github.com/AlejandroHerr/cookbook/internal/completions/mocks"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/mock"
@@ -18,12 +18,14 @@ import (
 )
 
 func TestRouter(t *testing.T) {
-	cache := new(completions.MockCache)
-	scrapper := new(completions.MockScrapper)
-	aiService := new(completions.MockAIService)
+	t.Parallel()
+
+	cache := new(mocks.Cache)
+	scrapper := new(mocks.Scrapper)
+	aiService := new(mocks.AIService)
 	logger := logger.NewTestLogger()
-	useCases := completions.MakeUseCases(cache, scrapper, aiService, logger)
-	router := completions.MakeRouter(useCases, logger)
+	useCases := completions.NewService(cache, scrapper, aiService, logger)
+	router := completions.NewRouter(useCases, logger)
 
 	r := chi.NewRouter()
 	r.Mount("/completions", router)
@@ -84,15 +86,15 @@ func TestRouter(t *testing.T) {
 
 			scrapedURL := gofakeit.Sentence(10)
 
-			scrapper.On("Scrap", context.Background(), url).Return(scrapedURL, nil)
+			scrapper.On("Scrap", t.Context(), url).Return(scrapedURL, nil)
 
 			expected := &completions.Recipe{ //nolint:exhaustruct
 				Title: "Recipe 1",
 			}
 
-			aiService.On("CompleteRecipe", context.Background(), scrapedURL).Return(expected, nil)
+			aiService.On("CompleteRecipe", t.Context(), scrapedURL).Return(expected, nil)
 
-			got, err := useCases.CompleteRecipe(context.Background(), url)
+			got, err := useCases.CompleteRecipe(t.Context(), url)
 
 			require.NoError(t, err, "should not fail")
 			require.Equal(t, expected, got, "should return the recipe")
@@ -102,9 +104,9 @@ func TestRouter(t *testing.T) {
 			expectedBytes, _ := json.Marshal(expected)
 			cache.AssertCalled(t, "Set", url, expectedBytes)
 
-			scrapper.AssertCalled(t, "Scrap", context.Background(), url)
+			scrapper.AssertCalled(t, "Scrap", t.Context(), url)
 
-			aiService.AssertCalled(t, "CompleteRecipe", context.Background(), scrapedURL)
+			aiService.AssertCalled(t, "CompleteRecipe", t.Context(), scrapedURL)
 
 			cache.AssertExpectations(t)
 			scrapper.AssertExpectations(t)

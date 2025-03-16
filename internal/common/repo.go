@@ -7,9 +7,8 @@ type (
 		Err error
 	}
 	DuplicateError struct {
-		Err    error
-		Entity string
-		Key    string
+		Err error
+		Key string
 	}
 	ConstrainError struct {
 		Err        error
@@ -26,7 +25,7 @@ func (e *NotFoundError) Error() string {
 func (e *NotFoundError) Unwrap() error { return e.Err }
 
 func (e *UnexpectedError) Error() string {
-	return fmt.Sprintf("too many rows: %v", e.Err)
+	return fmt.Sprintf("UnexpectedError: %v", e.Err)
 }
 func (e *UnexpectedError) Unwrap() error { return e.Err }
 
@@ -36,6 +35,6 @@ func (e *DuplicateError) Error() string {
 func (e *DuplicateError) Unwrap() error { return e.Err }
 
 func (e *ConstrainError) Error() string {
-	return fmt.Sprintf("constraint violation for %s: %v", e.Constraint, e.Err)
+	return fmt.Sprintf("ConstrainError: %v", e.Err)
 }
 func (e *ConstrainError) Unwrap() error { return e.Err }

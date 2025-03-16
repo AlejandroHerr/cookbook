@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -19,7 +20,7 @@ type Config struct {
 
 func New(cfg Config) *slog.Logger {
 	level := levelFromString(cfg.Level, slog.LevelDebug)
-	opts := &slog.HandlerOptions{
+	opts := &slog.HandlerOptions{ //nolint:exhaustruct
 		Level:     level,
 		AddSource: cfg.Environment == "development",
 	}
@@ -29,7 +30,7 @@ func New(cfg Config) *slog.Logger {
 	switch strings.ToLower(cfg.Environment) {
 	case "development":
 		// Use pretty text handler for development
-		handler = devslog.NewHandler(os.Stdout, &devslog.Options{
+		handler = devslog.NewHandler(os.Stdout, &devslog.Options{ //nolint:exhaustruct
 			HandlerOptions: opts,
 		})
 	default:
@@ -139,7 +140,12 @@ func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 		}
 	}
 
-	return h.handler.Handle(ctx, r)
+	err := h.handler.Handle(ctx, r)
+	if err != nil {
+		return fmt.Errorf("contextHandler Handle: %w", err)
+	}
+
+	return nil
 }
 
 func (h *ContextHandler) WithAttrs(attrs []slog.Attr) slog.Handler {

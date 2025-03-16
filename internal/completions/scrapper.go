@@ -35,7 +35,7 @@ type HTTPScrapper struct{}
 
 var _ Scrapper = (*HTTPScrapper)(nil)
 
-func MakeHTTPScrapper() *HTTPScrapper {
+func NewHTTPScrapper() *HTTPScrapper {
 	return &HTTPScrapper{}
 }
 
@@ -68,7 +68,7 @@ func (s HTTPScrapper) Scrap(ctx context.Context, url string) (string, error) {
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
-		return "", &Error{Err: fmt.Errorf("new document from reade: %w", err)}
+		return "", fmt.Errorf("new document from reade: %w", err)
 	}
 
 	doc.Find(

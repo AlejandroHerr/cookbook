@@ -14,26 +14,27 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-func MakeRouter(useCases *UseCases, logger *slog.Logger) chi.Router {
-	l := logger.With(slog.String("service", "recipes-router"))
+func NewRouter(service *Service, logger *slog.Logger) chi.Router {
 	r := chi.NewRouter()
 
-	r.Get("/", api.HandleRendererFunc(getAllRecipesHandler(useCases), l))
-	r.Post("/", api.HandleRendererFunc(createRecipeHandler(useCases), l))
+	r.Get("/", api.HandleRendererFunc(getAllRecipesHandler(service, logger), logger))
+	r.Post("/", api.HandleRendererFunc(createRecipeHandler(service, logger), logger))
 	r.Route("/{recipeIDSlug}", func(r chi.Router) {
-		r.Use(recipeCtx(useCases))
-		r.Get("/", api.HandleRendererFunc(getRecipeHandler, l))
-		r.Put("/", api.HandleRendererFunc(updateRecipeHandler(useCases), l))
-		r.Delete("/", api.HandleRendererFunc(deleteRecipeHandler(useCases), l))
+		r.Use(recipeCtx(service, logger))
+		r.Get("/", api.HandleRendererFunc(getRecipeHandler(logger), logger))
+		r.Put("/", api.HandleRendererFunc(updateRecipeHandler(service, logger), logger))
+		r.Delete("/", api.HandleRendererFunc(deleteRecipeHandler(service, logger), logger))
 	})
 
 	return r
 }
 
-func getAllRecipesHandler(useCases *UseCases) api.RendererFunc {
-	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
-		list, err := useCases.GetAll(r.Context())
+func getAllRecipesHandler(service *Service, logger *slog.Logger) api.RendererFunc {
+	return func(_ http.ResponseWriter, r *http.Request) render.Renderer {
+		list, err := service.List(r.Context())
 		if err != nil {
+			logger.ErrorContext(r.Context(), "list recipes failed", slog.Any("error", err))
+
 			return api.InternalServerError(err)
 		}
 
@@ -41,20 +42,25 @@ func getAllRecipesHandler(useCases *UseCases) api.RendererFunc {
 	}
 }
 
-func createRecipeHandler(useCases *UseCases) api.RendererFunc {
-	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
+func createRecipeHandler(service *Service, logger *slog.Logger) api.RendererFunc {
+	return func(_ http.ResponseWriter, r *http.Request) render.Renderer {
 		request := newCreateUpdateRecipeRequest()
 		if err := render.Bind(r, request); err != nil {
 			var validationErrors *validator.ValidationErrors
 			if as := errors.As(err, &validationErrors); as {
-				return api.ValidationBarRequest(*validationErrors)
+				logger.WarnContext(r.Context(), "request validation failed", slog.Any("error", err))
+				return api.ValidationBadRequest(*validationErrors)
 			}
+
+			logger.ErrorContext(r.Context(), "bind request failed", slog.Any("error", err))
 
 			return api.BadRequest(err)
 		}
 
-		recipe, err := useCases.Create(r.Context(), request.CreateUpdateRecipeDTO)
+		recipe, err := service.Create(r.Context(), request.CreateUpdateRecipeDTO)
 		if err != nil {
+			logger.ErrorContext(r.Context(), "create recipe failed", slog.Any("error", err))
+
 			var duplicateErr *common.DuplicateError
 			if as := errors.As(err, &duplicateErr); as {
 				return api.ErrConflict(err)
@@ -69,16 +75,18 @@ func createRecipeHandler(useCases *UseCases) api.RendererFunc {
 
 type recipeCtxKey struct{}
 
-func recipeCtx(useCases *UseCases) func(http.Handler) http.Handler {
+func recipeCtx(service *Service, logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			recipeIDSlug := chi.URLParam(r, "recipeIDSlug")
 
-			recipe, err := useCases.Get(r.Context(), recipeIDSlug)
+			recipe, err := service.Get(r.Context(), recipeIDSlug)
 			if err != nil {
+				logger.ErrorContext(r.Context(), "get recipe failed", slog.Any("error", err))
+
 				var notFoundErr *common.NotFoundError
 				if is := errors.As(err, &notFoundErr); is {
-					render.Render(w, r, api.NotFound("recipe")) //nolint: errcheck
+					render.Render(w, r, api.NotFound("recipe", err)) //nolint: errcheck
 					return
 				}
 
@@ -93,34 +101,45 @@ func recipeCtx(useCases *UseCases) func(http.Handler) http.Handler {
 	}
 }
 
-func getRecipeHandler(w http.ResponseWriter, r *http.Request) render.Renderer {
-	recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
-	if !ok {
-		return api.NotFound("recipe")
-	}
-
-	return newRecipeResponse(recipe)
-}
-
-func updateRecipeHandler(useCases *UseCases) api.RendererFunc {
-	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
+func getRecipeHandler(logger *slog.Logger) api.RendererFunc {
+	return func(_ http.ResponseWriter, r *http.Request) render.Renderer {
 		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 		if !ok {
-			return api.NotFound("recipe")
+			logger.ErrorContext(r.Context(), "get recipe from context failed")
+
+			return api.NotFound("recipe", nil)
+		}
+
+		return newRecipeResponse(recipe)
+	}
+}
+
+func updateRecipeHandler(service *Service, logger *slog.Logger) api.RendererFunc {
+	return func(_ http.ResponseWriter, r *http.Request) render.Renderer {
+		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
+		if !ok {
+			logger.ErrorContext(r.Context(), "get recipe from context failed")
+
+			return api.NotFound("recipe", nil)
 		}
 
 		request := newCreateUpdateRecipeRequest()
 		if err := render.Bind(r, request); err != nil {
 			var validationErrors *validator.ValidationErrors
 			if as := errors.As(err, &validationErrors); as {
-				return api.ValidationBarRequest(*validationErrors)
+				logger.WarnContext(r.Context(), "request validation failed", slog.Any("error", err))
+				return api.ValidationBadRequest(*validationErrors)
 			}
+
+			logger.ErrorContext(r.Context(), "bind request failed", slog.Any("error", err))
 
 			return api.BadRequest(err)
 		}
 
-		recipe, err := useCases.Update(r.Context(), recipe, request.CreateUpdateRecipeDTO)
+		recipe, err := service.Update(r.Context(), recipe, request.CreateUpdateRecipeDTO)
 		if err != nil {
+			logger.ErrorContext(r.Context(), "update recipe failed", slog.Any("error", err))
+
 			var duplicateErr *common.DuplicateError
 			if as := errors.As(err, &duplicateErr); as {
 				return api.ErrConflict(err)
@@ -133,15 +152,19 @@ func updateRecipeHandler(useCases *UseCases) api.RendererFunc {
 	}
 }
 
-func deleteRecipeHandler(useCases *UseCases) api.RendererFunc {
-	return func(w http.ResponseWriter, r *http.Request) render.Renderer {
+func deleteRecipeHandler(service *Service, logger *slog.Logger) api.RendererFunc {
+	return func(_ http.ResponseWriter, r *http.Request) render.Renderer {
 		recipe, ok := r.Context().Value(recipeCtxKey{}).(*Recipe)
 		if !ok {
-			return api.NotFound("recipe")
+			logger.ErrorContext(r.Context(), "get recipe from context failed")
+
+			return api.NotFound("recipe", nil)
 		}
 
-		err := useCases.Delete(r.Context(), recipe.ID.String())
+		err := service.Delete(r.Context(), recipe.ID.String())
 		if err != nil {
+			logger.ErrorContext(r.Context(), "delete recipe failed", slog.Any("error", err))
+
 			return api.InternalServerError(err)
 		}
 
@@ -222,22 +245,6 @@ func newRecipeResponse(recipe *Recipe) *RecipeResponse {
 }
 
 func (res RecipeResponse) Render(_ http.ResponseWriter, _ *http.Request) error {
-	return nil
-}
-
-type CreatedRecipeResponse struct {
-	*Recipe
-}
-
-func makeCreatedRecipeResponse(recipe *Recipe) *CreatedRecipeResponse {
-	return &CreatedRecipeResponse{
-		Recipe: recipe,
-	}
-}
-
-func (res CreatedRecipeResponse) Render(w http.ResponseWriter, _ *http.Request) error {
-	w.WriteHeader(http.StatusCreated)
-
 	return nil
 }
 

@@ -1,7 +1,6 @@
 package completions_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +12,8 @@ import (
 )
 
 func TestHTTPScrapper(t *testing.T) {
+	t.Parallel()
+
 	recipeBody := gofakeit.Sentence(10)
 	errorBody := gofakeit.Sentence(10)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -33,18 +34,18 @@ func TestHTTPScrapper(t *testing.T) {
 		ts.Close()
 	})
 
-	s := completions.MakeHTTPScrapper()
+	s := completions.NewHTTPScrapper()
 
 	t.Run("Scrap", func(t *testing.T) {
 		t.Parallel()
 		t.Run("returns the scrapped URL", func(t *testing.T) {
-			value, err := s.Scrap(context.Background(), ts.URL)
+			value, err := s.Scrap(t.Context(), ts.URL)
 
 			require.NoError(t, err, "should not return an error")
 			require.Contains(t, value, recipeBody, "should return the same recipe")
 		})
 		t.Run("returns an HTTPClientError when the http request fails", func(t *testing.T) {
-			_, err := s.Scrap(context.Background(), ts.URL+"/not-found")
+			_, err := s.Scrap(t.Context(), ts.URL+"/not-found")
 
 			var httpClientError *completions.HTTPClientError
 

@@ -1,17 +1,12 @@
 package common
 
-import (
-	"context"
-)
+import "context"
+
+type UnitOfWork interface {
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
 
 type TransactionManager interface {
-	Begin(ctx context.Context) (Transaction, error)
+	Begin(ctx context.Context) (context.Context, UnitOfWork, error)
 }
-
-type Transaction interface {
-	Rollback() error
-	Commit() error
-	Transaction() any
-}
-
-type TransactionContextKey struct{}

@@ -51,9 +51,9 @@ func ErrRender(err error) *ErrorResponse {
 	}
 }
 
-func NotFound(resource string) *ErrorResponse {
+func NotFound(resource string, err error) *ErrorResponse {
 	return &ErrorResponse{
-		Err:            nil,
+		Err:            err,
 		HTTPStatusCode: http.StatusNotFound,
 		StatusText:     http.StatusText(http.StatusNotFound),
 		ErrorText:      resource + " not found",
@@ -77,7 +77,7 @@ type ErrValidationDetail struct {
 	Path  string `json:"path"`
 }
 
-func ValidationBarRequest(err validator.ValidationErrors) *ErrorResponse {
+func ValidationBadRequest(err validator.ValidationErrors) *ErrorResponse {
 	details := make([]ErrValidationDetail, 0, len(err))
 	for _, e := range err {
 		details = append(details, ErrValidationDetail{

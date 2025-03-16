@@ -7,11 +7,14 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/AlejandroHerr/cookbook/internal/common/infra/db"
-	"github.com/AlejandroHerr/cookbook/internal/common/logging"
+	"github.com/AlejandroHerr/cookbook/internal/common/api"
+	"github.com/AlejandroHerr/cookbook/internal/common/logger"
+	"github.com/AlejandroHerr/cookbook/internal/common/pg"
 	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
+	pgrecipes "github.com/AlejandroHerr/cookbook/internal/recipes/pg"
 	"github.com/AlejandroHerr/cookbook/internal/suggestions"
+	pgsuggestions "github.com/AlejandroHerr/cookbook/internal/suggestions/pg"
 	"github.com/allegro/bigcache/v3"
 	"github.com/caarlos0/env/v11"
 	"github.com/go-chi/chi/v5"
@@ -21,8 +24,10 @@ import (
 )
 
 type Config struct {
-	DB           *db.Config
+	DB           *pg.Config
 	OpenAIConfig *completions.OpenAIConfig
+	Environment  string `env:"ENVIRONMENT" envDefault:"development"`
+	LogLevel     string `env:"LOG_LEVEL" envDefault:"debug"`
 }
 
 func main() {
@@ -32,19 +37,21 @@ func main() {
 }
 
 func run() error {
-	logger, err := logging.CreateLogger()
-	if err != nil {
-		return fmt.Errorf("error creating logger: %w", err)
-	}
-
 	config, err := loadConfig()
 	if err != nil {
 		return fmt.Errorf("error loading config: %w", err)
 	}
 
-	dbLogger := db.NewPgxLogger(logger.Named("pgx"))
+	logger := logger.New(logger.Config{
+		Level:       config.LogLevel,
+		Environment: config.Environment,
+		App:         "rest-api",
+		Version:     "1.0.0",
+	})
 
-	dbPool, err := db.Connect(
+	dbLogger := pg.NewPgxLogger(logger)
+
+	dbPool, err := pg.Connect(
 		context.Background(),
 		config.DB,
 		0,
@@ -56,16 +63,16 @@ func run() error {
 	defer dbPool.Close()
 
 	// Declare Recipes Router
-	sessionManager := db.MakePgxTransactionManager(dbPool)
-	ingredientsRepo := recipes.MakePgIngredientsRepo(dbPool)
-	recipesRepo := recipes.MakePgRecipesRepository(dbPool)
-	recipesUseCases := recipes.MakeUseCases(sessionManager, recipesRepo, ingredientsRepo, logger)
-	recipesRouter := recipes.MakeRouter(recipesUseCases)
+	sessionManager := pg.NewTransactionManager(dbPool)
+	ingredientsRepo := pgrecipes.NewIngredientsRepo(dbPool)
+	recipesRepo := pgrecipes.NewRecipesRepo(dbPool)
+	recipesService := recipes.NewService(sessionManager, recipesRepo, ingredientsRepo, logger.With("service", "recipes"))
+	recipesRouter := recipes.NewRouter(recipesService, logger.With("service", "recipes-router"))
 
 	// Declare Suggestions Router
-	suggestionsRepo := suggestions.MakePgSuggestionsRepo(dbPool)
-	suggestionsUseCases := suggestions.MakeUseCases(suggestionsRepo)
-	suggestionsRouter := suggestions.MakeRouter(suggestionsUseCases)
+	suggestionsRepo := pgsuggestions.NewSuggestionsRepo(dbPool)
+	suggestionsUseCases := suggestions.NewService(suggestionsRepo, logger.With("service", "suggestions"))
+	suggestionsRouter := suggestions.NewRouter(suggestionsUseCases, logger.With("service", "suggestions-router"))
 
 	// Declare Completions Router
 	cache, err := bigcache.New(context.Background(), bigcache.DefaultConfig(time.Hour))
@@ -74,16 +81,16 @@ func run() error {
 	}
 	defer cache.Close()
 
-	scrapper := completions.MakeHTTPScrapper()
-	aiService := completions.MakeOpenAIService(config.OpenAIConfig)
-	completionsUseCases := completions.MakeUseCases(cache, scrapper, aiService, logger)
-	completionsRouter := completions.MakeRouter(completionsUseCases)
+	scrapper := completions.NewHTTPScrapper()
+	aiService := completions.NewOpenAIService(config.OpenAIConfig, logger.With("service", "openai"))
+	completionsUseCases := completions.NewService(cache, scrapper, aiService, logger)
+	completionsRouter := completions.NewRouter(completionsUseCases, logger)
 
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
+	r.Use(api.RequestIDMiddleware())
+	r.Use(api.RequestLoggerMiddleware(logger))
 	r.Use(middleware.URLFormat)
 	r.Use(middleware.NoCache)
 	r.Use(cors.Handler(cors.Options{ //nolint:exhaustruct
@@ -101,7 +108,7 @@ func run() error {
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	logger.Infow("Server listening", "address", server.Addr)
+	logger.InfoContext(context.Background(), "Server listening", "address", server.Addr)
 
 	err = server.ListenAndServe()
 	if err != nil {
@@ -113,7 +120,7 @@ func run() error {
 
 func loadConfig() (*Config, error) {
 	config := &Config{
-		DB:           &db.Config{},                //nolint:exhaustruct
+		DB:           &pg.Config{},                //nolint:exhaustruct
 		OpenAIConfig: &completions.OpenAIConfig{}, //nolint:exhaustruct
 	}
 	if err := env.Parse(config); err != nil {
