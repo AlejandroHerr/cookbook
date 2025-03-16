@@ -29,7 +29,7 @@ func NewRecipesRepo(dbtx sql.DBTX) *RecipesRepo {
 func (r RecipesRepo) List(ctx context.Context) ([]recipes.Recipe, error) {
 	dbtx := pgdb.GetDBTX(ctx, r.dbtx)
 
-	list, err := r.queries.List(ctx, dbtx)
+	list, err := r.queries.ListRecipes(ctx, dbtx)
 	if err != nil {
 		return nil, fmt.Errorf("query GetRecipes: %w", err)
 	}
@@ -223,9 +223,9 @@ func (r RecipesRepo) getBy(ctx context.Context, field string, value string) (*re
 
 	switch field {
 	case "id":
-		recipe, err = r.queries.GetByID(ctx, dbtx, value)
+		recipe, err = r.queries.GetRecipeByID(ctx, dbtx, value)
 	case "slug":
-		recipe, err = r.queries.GetBySlug(ctx, dbtx, value)
+		recipe, err = r.queries.GetRecipeBySlug(ctx, dbtx, value)
 	default:
 		return nil, fmt.Errorf("get by %s not implemented", field)
 	}

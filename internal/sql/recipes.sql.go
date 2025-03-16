@@ -144,13 +144,13 @@ func (q *Queries) DeleteRecipeIngredients(ctx context.Context, db DBTX, recipeID
 	return result.RowsAffected(), nil
 }
 
-const getByID = `-- name: GetByID :one
+const getRecipeByID = `-- name: GetRecipeByID :one
 SELECT id, title, headline, description, steps, servings, prep_time, url, tags, slug, created_at, updated_at FROM recipes
 WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetByID(ctx context.Context, db DBTX, id string) (Recipe, error) {
-	row := db.QueryRow(ctx, getByID, id)
+func (q *Queries) GetRecipeByID(ctx context.Context, db DBTX, id string) (Recipe, error) {
+	row := db.QueryRow(ctx, getRecipeByID, id)
 	var i Recipe
 	err := row.Scan(
 		&i.ID,
@@ -169,13 +169,13 @@ func (q *Queries) GetByID(ctx context.Context, db DBTX, id string) (Recipe, erro
 	return i, err
 }
 
-const getBySlug = `-- name: GetBySlug :one
+const getRecipeBySlug = `-- name: GetRecipeBySlug :one
 SELECT id, title, headline, description, steps, servings, prep_time, url, tags, slug, created_at, updated_at FROM recipes
 WHERE slug = $1 LIMIT 1
 `
 
-func (q *Queries) GetBySlug(ctx context.Context, db DBTX, slug string) (Recipe, error) {
-	row := db.QueryRow(ctx, getBySlug, slug)
+func (q *Queries) GetRecipeBySlug(ctx context.Context, db DBTX, slug string) (Recipe, error) {
+	row := db.QueryRow(ctx, getRecipeBySlug, slug)
 	var i Recipe
 	err := row.Scan(
 		&i.ID,
@@ -265,12 +265,12 @@ func (q *Queries) GetSlugs(ctx context.Context, db DBTX, slug string) ([]string,
 	return items, nil
 }
 
-const list = `-- name: List :many
+const listRecipes = `-- name: ListRecipes :many
 SELECT id, title, headline, description, steps, servings, prep_time, url, tags, slug, created_at, updated_at FROM recipes ORDER BY created_at DESC
 `
 
-func (q *Queries) List(ctx context.Context, db DBTX) ([]Recipe, error) {
-	rows, err := db.Query(ctx, list)
+func (q *Queries) ListRecipes(ctx context.Context, db DBTX) ([]Recipe, error) {
+	rows, err := db.Query(ctx, listRecipes)
 	if err != nil {
 		return nil, err
 	}

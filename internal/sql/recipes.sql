@@ -1,11 +1,11 @@
--- name: List :many
+-- name: ListRecipes :many
 SELECT * FROM recipes ORDER BY created_at DESC;
 
--- name: GetByID :one
+-- name: GetRecipeByID :one
 SELECT * FROM recipes
 WHERE id = $1 LIMIT 1; 
 
--- name: GetBySlug :one
+-- name: GetRecipeBySlug :one
 SELECT * FROM recipes
 WHERE slug = $1 LIMIT 1;
 
