@@ -1,0 +1,18 @@
+import { useSuspenseQuery } from '@tanstack/react-query';
+import { createFileRoute, Outlet } from '@tanstack/react-router';
+
+import { recipesListQueryOptions } from '../api/recipes.new.api';
+import { RecipesList } from '../recipes/list';
+
+export const Route = createFileRoute('/recipes')({
+  component: RecipesPage,
+});
+
+export function RecipesPage() {
+  return (
+    <div>
+      <div>Hello, recipes!</div>
+      <Outlet />
+    </div>
+  );
+}
