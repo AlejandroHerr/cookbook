@@ -18,7 +18,7 @@ type DBTX interface {
 }
 
 type Config struct {
-	Password *string `env:"POSTGRES_PASS" json:"-"`
+	Password *string `env:"POSTGRES_PASSWORD" json:"-"`
 	User     *string `env:"POSTGRES_USER" json:"user,omitempty"`
 	Port     int     `env:"POSTGRES_PORT,notEmpty,required" json:"port"`
 	Host     string  `env:"POSTGRES_HOST,notEmpty,required" json:"host"`
