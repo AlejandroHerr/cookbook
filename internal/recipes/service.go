@@ -10,6 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type UniqueSlugGetter interface {
+	GetUniqueSlug(ctx context.Context, entity string, name string) (string, error)
+}
+
 type RecipesRepo interface {
 	List(ctx context.Context) ([]Recipe, error)
 	Create(ctx context.Context, recipe Recipe) (*Recipe, error)
@@ -17,7 +21,6 @@ type RecipesRepo interface {
 	GetBySlug(ctx context.Context, recipeSlug string) (*Recipe, error)
 	Update(ctx context.Context, recipe Recipe) (*Recipe, error)
 	Delete(ctx context.Context, recipeID string) error
-	GetUniqueSlug(ctx context.Context, title string) (string, error)
 }
 
 type IngredientsRepo interface {
@@ -28,6 +31,7 @@ type Service struct {
 	recipesRepo        RecipesRepo
 	ingredientsRepo    IngredientsRepo
 	transactionManager common.TransactionManager
+	uniqueSlugGetter   UniqueSlugGetter
 	logger             *slog.Logger
 }
 
@@ -35,12 +39,14 @@ func NewService(
 	transactionManager common.TransactionManager,
 	recipesRepo RecipesRepo,
 	ingredientsRepo IngredientsRepo,
+	uniqueSlugGetter UniqueSlugGetter,
 	logger *slog.Logger,
 ) *Service {
 	return &Service{
 		transactionManager: transactionManager,
 		recipesRepo:        recipesRepo,
 		ingredientsRepo:    ingredientsRepo,
+		uniqueSlugGetter:   uniqueSlugGetter,
 		logger:             logger,
 	}
 }
@@ -61,7 +67,7 @@ func (s Service) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Recip
 	}
 
 	defer func() {
-		err := uow.Rollback(ctx)
+		err = uow.Rollback(ctx)
 		if err != nil {
 			s.logger.WarnContext(ctx, "rolling back transaction", slog.Any("error", err))
 		}
@@ -77,9 +83,9 @@ func (s Service) Create(ctx context.Context, dto *CreateUpdateRecipeDTO) (*Recip
 		servings = dto.Servings
 	}
 
-	slug, err := s.recipesRepo.GetUniqueSlug(ctxWithUow, dto.Title)
+	slug, err := s.uniqueSlugGetter.GetUniqueSlug(ctx, "recipes", dto.Title)
 	if err != nil {
-		return nil, fmt.Errorf("recipesRepo GetUniqueSlug: %w", err)
+		return nil, fmt.Errorf("uniqueSlugGetter GetUniqueSlug: %w", err)
 	}
 
 	recipe := Recipe{
@@ -138,7 +144,7 @@ func (s Service) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateRe
 	}
 
 	defer func() {
-		err := uow.Rollback(ctx)
+		err = uow.Rollback(ctx)
 		if err != nil {
 			s.logger.WarnContext(ctx, "rolling back transaction", slog.Any("error", err))
 		}
@@ -156,9 +162,9 @@ func (s Service) Update(ctx context.Context, recipe *Recipe, dto *CreateUpdateRe
 
 	slug := recipe.Slug
 	if dto.Title != recipe.Title {
-		slug, err = s.recipesRepo.GetUniqueSlug(ctxWithUow, dto.Title)
+		slug, err = s.uniqueSlugGetter.GetUniqueSlug(ctx, "recipes", dto.Title)
 		if err != nil {
-			return nil, fmt.Errorf("recipesRepo GetUniqueSlug: %w", err)
+			return nil, fmt.Errorf("uniqueSlugGetter GetUniqueSlug: %w", err)
 		}
 	}
 

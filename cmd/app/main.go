@@ -13,6 +13,8 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/completions"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	pgrecipes "github.com/AlejandroHerr/cookbook/internal/recipes/pg"
+	"github.com/AlejandroHerr/cookbook/internal/slugs"
+	pgslugs "github.com/AlejandroHerr/cookbook/internal/slugs/pg"
 	"github.com/AlejandroHerr/cookbook/internal/suggestions"
 	pgsuggestions "github.com/AlejandroHerr/cookbook/internal/suggestions/pg"
 	"github.com/allegro/bigcache/v3"
@@ -62,11 +64,14 @@ func run() error {
 	}
 	defer dbPool.Close()
 
+	slugsRepo := pgslugs.NewRepo(dbPool)
+	slugsService := slugs.NewService(slugsRepo)
+
 	// Declare Recipes Router
 	sessionManager := pg.NewTransactionManager(dbPool)
 	ingredientsRepo := pgrecipes.NewIngredientsRepo(dbPool)
 	recipesRepo := pgrecipes.NewRecipesRepo(dbPool)
-	recipesService := recipes.NewService(sessionManager, recipesRepo, ingredientsRepo, logger.With("service", "recipes"))
+	recipesService := recipes.NewService(sessionManager, recipesRepo, ingredientsRepo, slugsService, logger.With("service", "recipes"))
 	recipesRouter := recipes.NewRouter(recipesService, logger.With("service", "recipes-router"))
 
 	// Declare Suggestions Router

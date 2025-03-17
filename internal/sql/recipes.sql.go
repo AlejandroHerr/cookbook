@@ -239,32 +239,6 @@ func (q *Queries) GetRecipeIngredients(ctx context.Context, db DBTX, recipeID st
 	return items, nil
 }
 
-const getSlugs = `-- name: GetSlugs :many
-SELECT slug FROM recipes 
-WHERE slug = $1 
-OR slug ~ ($1 || '-[0-9]+$')
-`
-
-func (q *Queries) GetSlugs(ctx context.Context, db DBTX, slug string) ([]string, error) {
-	rows, err := db.Query(ctx, getSlugs, slug)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []string
-	for rows.Next() {
-		var slug string
-		if err := rows.Scan(&slug); err != nil {
-			return nil, err
-		}
-		items = append(items, slug)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listRecipes = `-- name: ListRecipes :many
 SELECT id, title, headline, description, steps, servings, prep_time, url, tags, slug, created_at, updated_at FROM recipes ORDER BY created_at DESC
 `

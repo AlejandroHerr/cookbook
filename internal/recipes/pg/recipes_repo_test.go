@@ -12,7 +12,6 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/AlejandroHerr/cookbook/internal/recipes/pg"
 	"github.com/AlejandroHerr/cookbook/internal/recipes/pg/fixtures"
-	"github.com/AlejandroHerr/cookbook/internal/sql"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -285,42 +284,6 @@ func TestPgRecipesRepository(t *testing.T) {
 			err := repo.Delete(t.Context(), uuid.NewString())
 
 			require.NoError(t, err, "error should be nil")
-		})
-	})
-	t.Run("GetUniqueSlug", func(t *testing.T) {
-		t.Run("returs default slug if empty", func(t *testing.T) {
-			title := gofakeit.Adjective() + " " + gofakeit.Adjective() + " " + gofakeit.Dinner()
-			wanted := slug.Make(title)
-
-			got, err := repo.GetUniqueSlug(t.Context(), title)
-			require.NoError(t, err, "error should be nil")
-			require.Equal(t, wanted, got, "should return the same slug")
-		})
-		t.Run("returns next available slug", func(t *testing.T) {
-			title := gofakeit.Adjective() + " " + gofakeit.Adjective() + " " + gofakeit.Dinner()
-			slug := slug.Make(title)
-
-			testRecipes := []sql.CreateRecipeParams{
-				{ID: uuid.New().String(), Title: title, Slug: slug},
-				{ID: uuid.New().String(), Title: title, Slug: slug + "-1"},
-				{ID: uuid.New().String(), Title: title, Slug: slug + "-2"},
-				{ID: uuid.New().String(), Title: title, Slug: slug + "-3"},
-				{ID: uuid.New().String(), Title: title, Slug: slug + "-5"},
-				{ID: uuid.New().String(), Title: title, Slug: slug + "-vegan"},
-			}
-			queries := sql.New()
-
-			for _, r := range testRecipes {
-				_, err := queries.CreateRecipe(t.Context(),
-					db, r)
-
-				require.NoError(t, err, "error inserting test data")
-			}
-
-			wanted := slug + "-4"
-			got, err := repo.GetUniqueSlug(t.Context(), title)
-			require.NoError(t, err, "error should be nil")
-			require.Equal(t, wanted, got, "should return the next available slug")
 		})
 	})
 }

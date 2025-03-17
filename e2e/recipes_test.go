@@ -17,6 +17,8 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	pgrecipes "github.com/AlejandroHerr/cookbook/internal/recipes/pg"
 	"github.com/AlejandroHerr/cookbook/internal/recipes/pg/fixtures"
+	"github.com/AlejandroHerr/cookbook/internal/slugs"
+	pgslugs "github.com/AlejandroHerr/cookbook/internal/slugs/pg"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
@@ -340,10 +342,13 @@ func setup(t *testing.T) *recipesTestSuite {
 
 	transactionManager := pg.NewTransactionManager(db)
 
+	slugsRepo := pgslugs.NewRepo(db)
+	slugsService := slugs.NewService(slugsRepo)
+
 	ingredientsRepo := pgrecipes.NewIngredientsRepo(db)
 	recipesRepo := pgrecipes.NewRecipesRepo(db)
 
-	recipesService := recipes.NewService(transactionManager, recipesRepo, ingredientsRepo, logger)
+	recipesService := recipes.NewService(transactionManager, recipesRepo, ingredientsRepo, slugsService, logger)
 
 	recipesRouter := recipes.NewRouter(recipesService, logger)
 

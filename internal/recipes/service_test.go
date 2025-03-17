@@ -19,24 +19,27 @@ import (
 )
 
 type testServices struct {
-	mockTxm             *commonmocks.TransactionManager
-	mockRecipesRepo     *mocks.RecipesRepo
-	mockIngredientsRepo *mocks.IngredientsRepo
-	service             *recipes.Service
+	mockTxm              *commonmocks.TransactionManager
+	mockRecipesRepo      *mocks.RecipesRepo
+	mockIngredientsRepo  *mocks.IngredientsRepo
+	mockUniqueSlugGetter *mocks.UniqueSlugGetter
+	service              *recipes.Service
 }
 
 func newTestServices() *testServices {
 	mockTxm := new(commonmocks.TransactionManager)
 	mockRecipesRepo := new(mocks.RecipesRepo)
 	mockIngredientsRepo := new(mocks.IngredientsRepo)
+	mockUniqueSlugGetter := new(mocks.UniqueSlugGetter)
 
-	service := recipes.NewService(mockTxm, mockRecipesRepo, mockIngredientsRepo, logger.NewTestLogger())
+	service := recipes.NewService(mockTxm, mockRecipesRepo, mockIngredientsRepo, mockUniqueSlugGetter, logger.NewTestLogger())
 
 	return &testServices{
-		mockTxm:             mockTxm,
-		mockRecipesRepo:     mockRecipesRepo,
-		mockIngredientsRepo: mockIngredientsRepo,
-		service:             service,
+		mockTxm:              mockTxm,
+		mockRecipesRepo:      mockRecipesRepo,
+		mockIngredientsRepo:  mockIngredientsRepo,
+		mockUniqueSlugGetter: mockUniqueSlugGetter,
+		service:              service,
 	}
 }
 
@@ -73,15 +76,13 @@ func TestRecipesService(t *testing.T) {
 		t.Parallel()
 
 		testCases := []struct {
-			dto  *recipes.CreateUpdateRecipeDTO
-			slug string
+			dto *recipes.CreateUpdateRecipeDTO
 		}{{
 			dto: func() *recipes.CreateUpdateRecipeDTO {
 				dto := &recipes.CreateUpdateRecipeDTO{}
 				gofakeit.Struct(&dto)
 				return dto
 			}(),
-			slug: slug.Make(gofakeit.Sentence(10)),
 		}, {
 			dto: func() *recipes.CreateUpdateRecipeDTO {
 				dto := &recipes.CreateUpdateRecipeDTO{}
@@ -90,7 +91,6 @@ func TestRecipesService(t *testing.T) {
 
 				return dto
 			}(),
-			slug: slug.Make(gofakeit.Sentence(10)),
 		}}
 
 		for _, tc := range testCases {
@@ -105,12 +105,14 @@ func TestRecipesService(t *testing.T) {
 
 				recipeIngredients := []recipes.RecipeIngredient{}
 
+				slug := slug.Make(tc.dto.Title)
+
 				expected := &recipes.Recipe{
 					ID:          uuid.New(),
 					CreatedAt:   time.Now(),
 					UpdatedAt:   time.Now(),
 					Title:       tc.dto.Title,
-					Slug:        tc.slug,
+					Slug:        slug,
 					Headline:    &tc.dto.Headline,
 					Description: &tc.dto.Description,
 					Steps:       &tc.dto.Steps,
@@ -126,7 +128,7 @@ func TestRecipesService(t *testing.T) {
 				}
 
 				services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return(recipeIngredients, nil)
-				services.mockRecipesRepo.On("GetUniqueSlug", mock.Anything, mock.Anything).Return(tc.slug, nil)
+				services.mockUniqueSlugGetter.On("GetUniqueSlug", mock.Anything, "recipes", tc.dto.Title).Return(slug, nil)
 				services.mockRecipesRepo.On("Create", mock.Anything, mock.Anything).Return(expected, nil)
 
 				got, err := services.service.Create(ctx, tc.dto)
@@ -137,16 +139,13 @@ func TestRecipesService(t *testing.T) {
 				services.mockIngredientsRepo.AssertNumberOfCalls(t, "UpsertMany", 1)
 				services.mockIngredientsRepo.AssertCalled(t, "UpsertMany", mock.Anything, tc.dto.Ingredients)
 
-				services.mockRecipesRepo.AssertNumberOfCalls(t, "GetUniqueSlug", 1)
-				services.mockRecipesRepo.AssertCalled(t, "GetUniqueSlug", mock.Anything, tc.dto.Title)
-
 				services.mockRecipesRepo.AssertNumberOfCalls(t, "Create", 1)
 				services.mockRecipesRepo.AssertCalled(t, "Create", mock.Anything, mock.MatchedBy(func(input any) bool {
 					r := input.(recipes.Recipe)
 
 					return r.ID.String() != uuid.Nil.String() &&
 						r.Title == expected.Title &&
-						r.Slug == tc.slug &&
+						r.Slug == slug &&
 						r.Headline == expected.Headline &&
 						r.Description == expected.Description &&
 						r.Steps == expected.Steps &&
@@ -164,6 +163,7 @@ func TestRecipesService(t *testing.T) {
 
 				mock.AssertExpectationsForObjects(t, services.mockIngredientsRepo)
 				mock.AssertExpectationsForObjects(t, services.mockRecipesRepo)
+				mock.AssertExpectationsForObjects(t, services.mockUniqueSlugGetter)
 				mock.AssertExpectationsForObjects(t, mockUow)
 			})
 		}
@@ -212,7 +212,7 @@ func TestRecipesService(t *testing.T) {
 			repoErr := errors.New("repo error")
 
 			services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return([]recipes.RecipeIngredient{}, nil)
-			services.mockRecipesRepo.On("GetUniqueSlug", mock.Anything, mock.Anything).Return("some-slug", nil)
+			services.mockUniqueSlugGetter.On("GetUniqueSlug", mock.Anything, "recipes", dto.Title).Return("some-slug", nil)
 			services.mockRecipesRepo.On("Create", mock.Anything, mock.Anything).Return(new(recipes.Recipe), repoErr)
 
 			created, err := services.service.Create(ctx, dto)
@@ -222,8 +222,8 @@ func TestRecipesService(t *testing.T) {
 			require.Nil(t, created)
 
 			services.mockIngredientsRepo.AssertNumberOfCalls(t, "UpsertMany", 1)
-			services.mockRecipesRepo.AssertNumberOfCalls(t, "GetUniqueSlug", 1)
 			services.mockRecipesRepo.AssertNumberOfCalls(t, "Create", 1)
+			services.mockUniqueSlugGetter.AssertExpectations(t)
 
 			mockUow.AssertNumberOfCalls(t, "Commit", 0)
 			mockUow.AssertNumberOfCalls(t, "Rollback", 1)
@@ -289,7 +289,6 @@ func TestRecipesService(t *testing.T) {
 		testCases := []struct {
 			dto       *recipes.CreateUpdateRecipeDTO
 			recipe    *recipes.Recipe
-			slug      string
 			keepTitle bool
 		}{
 			{
@@ -303,7 +302,6 @@ func TestRecipesService(t *testing.T) {
 					gofakeit.Struct(&dto)
 					return dto
 				}(),
-				slug:      slug.Make(gofakeit.Sentence(10)),
 				keepTitle: true,
 			},
 			{
@@ -317,7 +315,6 @@ func TestRecipesService(t *testing.T) {
 					gofakeit.Struct(&dto)
 					return dto
 				}(),
-				slug:      slug.Make(gofakeit.Sentence(10)),
 				keepTitle: false,
 			},
 			{
@@ -333,7 +330,6 @@ func TestRecipesService(t *testing.T) {
 					gofakeit.Struct(&dto)
 					return dto
 				}(),
-				slug:      slug.Make(gofakeit.Sentence(10)),
 				keepTitle: true,
 			},
 		}
@@ -369,7 +365,7 @@ func TestRecipesService(t *testing.T) {
 				if tc.keepTitle {
 					tc.recipe.Title = tc.dto.Title
 				} else {
-					expected.Slug = tc.slug
+					expected.Slug = slug.Make(tc.dto.Title)
 				}
 
 				if expected.Servings < 1 {
@@ -379,7 +375,7 @@ func TestRecipesService(t *testing.T) {
 				services.mockIngredientsRepo.On("UpsertMany", mock.Anything, mock.Anything).Return(recipeIngredients, nil)
 
 				if !tc.keepTitle {
-					services.mockRecipesRepo.On("GetUniqueSlug", mock.Anything, mock.Anything).Return(tc.slug, nil)
+					services.mockUniqueSlugGetter.On("GetUniqueSlug", mock.Anything, "recipes", tc.dto.Title).Return(expected.Slug, nil)
 				}
 
 				services.mockRecipesRepo.On("Update", mock.Anything, mock.Anything).Return(expected, nil)
@@ -393,8 +389,7 @@ func TestRecipesService(t *testing.T) {
 				services.mockIngredientsRepo.AssertCalled(t, "UpsertMany", mock.Anything, tc.dto.Ingredients)
 
 				if !tc.keepTitle {
-					services.mockRecipesRepo.AssertNumberOfCalls(t, "GetUniqueSlug", 1)
-					services.mockRecipesRepo.AssertCalled(t, "GetUniqueSlug", mock.Anything, tc.dto.Title)
+					services.mockUniqueSlugGetter.AssertExpectations(t)
 				}
 
 				services.mockRecipesRepo.AssertNumberOfCalls(t, "Update", 1)

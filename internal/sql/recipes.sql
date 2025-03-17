@@ -9,11 +9,6 @@ WHERE id = $1 LIMIT 1;
 SELECT * FROM recipes
 WHERE slug = $1 LIMIT 1;
 
--- name: GetSlugs :many
-SELECT slug FROM recipes 
-WHERE slug = $1 
-OR slug ~ ($1 || '-[0-9]+$');
-
 -- name: GetRecipeIngredients :many
 SELECT 
   i.id, i.name, i.kind, ri.unit, ri.quantity

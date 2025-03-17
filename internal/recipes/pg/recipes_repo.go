@@ -9,7 +9,6 @@ import (
 	"github.com/AlejandroHerr/cookbook/internal/common/utils"
 	"github.com/AlejandroHerr/cookbook/internal/recipes"
 	"github.com/AlejandroHerr/cookbook/internal/sql"
-	"github.com/gosimple/slug"
 )
 
 var _ recipes.RecipesRepo = (*RecipesRepo)(nil)
@@ -182,36 +181,6 @@ func (r RecipesRepo) Delete(ctx context.Context, recipeID string) error {
 	}
 
 	return nil
-}
-
-func (r RecipesRepo) GetUniqueSlug(ctx context.Context, title string) (string, error) {
-	dbtx := pgdb.GetDBTX(ctx, r.dbtx)
-
-	slug := slug.Make(title)
-
-	slugs, err := r.queries.GetSlugs(ctx, dbtx, slug)
-	if err != nil {
-		return "", fmt.Errorf("querying existing slugs: %w", &common.UnexpectedError{Err: err})
-	}
-
-	existingSlugs := make(map[string]bool)
-
-	for _, s := range slugs {
-		existingSlugs[s] = true
-	}
-
-	if !existingSlugs[slug] {
-		return slug, nil
-	}
-
-	for i := 1; i < 1000; i++ {
-		newSlug := fmt.Sprintf("%s-%d", slug, i)
-		if !existingSlugs[newSlug] {
-			return newSlug, nil
-		}
-	}
-
-	return "", fmt.Errorf("could not find a unique slug for %s", title)
 }
 
 func (r RecipesRepo) getBy(ctx context.Context, field string, value string) (*recipes.Recipe, error) {
